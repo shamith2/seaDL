@@ -36,6 +36,9 @@ class BatchNorm2d(nn.Module):
         self.running_var = mx.ones(shape=(num_features,))
         self.num_batches_tracked = mx.zeros(shape=(1,))
 
+        # freeze buffers since they are not required for gradient computation
+        self.freeze(keys=['running_mean', 'running_var', 'num_batches_tracked'])
+
     def __call__(
             self,
             x: mx.array

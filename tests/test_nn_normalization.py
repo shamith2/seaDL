@@ -15,6 +15,7 @@ def test_batchnorm2d_module(pytest_configure):
     bn = BatchNorm2d(pytest.num_features, device=pytest.device)
 
     params = bn.parameters()
+    t_params = bn.trainable_parameters()
 
     assert bn.num_features == pytest.num_features
 
@@ -28,9 +29,9 @@ def test_batchnorm2d_module(pytest_configure):
     assert isinstance(bn.running_var, mx.array), f"running_var has wrong type: {type(bn.running_var)}"
     assert isinstance(bn.num_batches_tracked, mx.array), f"num_batches_tracked has wrong type: {type(bn.num_batches_tracked)}"
 
-    # assert 'running_mean' not in params.keys(), "running_mean should not be in list of parameters since it is a buffer"
-    # assert 'running_var' not in params.keys(), "running_var should not be in list of parameters since it is a buffer"
-    # assert 'num_batches_tracked' not in params.keys(), "num_batches_tracked should not be in list of parameters since it is a buffer"
+    assert 'running_mean' not in t_params.keys(), "running_mean should not be in list of trainable parameters since it is a buffer"
+    assert 'running_var' not in t_params.keys(), "running_var should not be in list of trainable parameters since it is a buffer"
+    assert 'num_batches_tracked' not in t_params.keys(), "num_batches_tracked should not be in list of trainable parameters since it is a buffer"
 
 
 def test_batchnorm2d_forward(pytest_configure):
