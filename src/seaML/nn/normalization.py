@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
@@ -14,7 +14,7 @@ class BatchNorm2d(nn.Module):
             num_features: int,
             eps: float = 1e-05,
             momentum: float = 0.1,
-            device: Union[mx.DeviceType, None] = None
+            device: Optional[mx.DeviceType] = None
     ):
         '''
         Like nn.BatchNorm2d with track_running_stats=True and affine=True
@@ -44,7 +44,7 @@ class BatchNorm2d(nn.Module):
             x: mx.array
     ) -> mx.array:
         '''
-        Normalize each channel
+        Normalize each channel/feature
 
         x: shape (batch, channels, height, width)
         Return: shape (batch, channels, height, width)
@@ -76,5 +76,5 @@ class BatchNorm2d(nn.Module):
         return out
 
     def _extra_repr(self) -> str:
-        return ""
+        return super()._extra_repr()
 

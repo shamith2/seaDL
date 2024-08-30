@@ -14,7 +14,7 @@ def maxpool2d_strided(
     kernel_size: Union[int, tuple[int, int]],
     stride: Optional[Union[int, tuple[int, int]]] = None,
     padding: Union[int, tuple[int, int]] = 0,
-    device: Union[mx.DeviceType, None] = None
+    device: Optional[mx.DeviceType] = None
 ) -> mx.array:
     '''
     Like torch.nn.functional.max_pool2d
@@ -58,7 +58,7 @@ def maxpool2d_strided(
 @jaxtyped(typechecker=typechecker)
 def averagepool2d(
     x: mx.array,
-    device: Union[mx.DeviceType, None] = None
+    device: Optional[mx.DeviceType] = None
 ) -> mx.array:
     """
     x: shape (batch, channels, height, width)

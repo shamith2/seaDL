@@ -4,7 +4,7 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
-from seaML.nn import Conv2d
+from seaML.nn import Conv1d, Conv2d
 
 
 @pytest.fixture
@@ -15,10 +15,50 @@ def pytest_configure():
     pytest.use_bias = True
 
 
+def test_nn_conv1d(pytest_configure):
+    m = Conv1d(4, 5, 3)
+    assert m.weight.size == 4 * 5 * 3
+
+    for _ in range(pytest.n_tests):
+        b = mx.random.randint(1, 10)
+        l = mx.random.randint(10, 300)
+        ci = mx.random.randint(1, 20)
+        co = mx.random.randint(1, 20)
+
+        kernel_size = mx.random.randint(1, 10).item()
+        stride = mx.random.randint(1, 5).item()
+        padding = mx.random.randint(0, 5).item()
+
+        x = mx.random.normal(shape=(b.item(), ci.item(), l.item()))
+        x_torch = torch.from_numpy(np.array(x))
+
+        my_conv = Conv1d(
+            in_channels=ci.item(),
+            out_channels=co.item(),
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            bias=pytest.use_bias,
+            device=pytest.device
+        )
+
+        my_output = my_conv(x)
+        my_output_torch = torch.from_numpy(np.array(my_output))
+
+        torch_output = F.conv1d(
+            x_torch,
+            torch.from_numpy(np.array(my_conv.weight)),
+            bias=torch.from_numpy(np.array(my_conv.bias)) if pytest.use_bias else None,
+            stride=stride,
+            padding=padding,
+            dilation=1,
+            groups=1
+        )
+
+        torch.testing.assert_close(my_output_torch, torch_output)
+
+
 def test_nn_conv2d(pytest_configure):
-    '''
-    Your weight should be called 'weight' and have an appropriate number of elements
-    '''
     m = Conv2d(4, 5, 3)
     assert m.weight.size == 4 * 5 * 3 * 3
 
@@ -30,14 +70,14 @@ def test_nn_conv2d(pytest_configure):
         co = mx.random.randint(1, 20)
 
         if pytest.tuples:
+            kernel_size = tuple(mx.random.randint(1, 10, shape=(2,)).tolist())
             stride = tuple(mx.random.randint(1, 5, shape=(2,)).tolist())
             padding = tuple(mx.random.randint(0, 5, shape=(2,)).tolist())
-            kernel_size = tuple(mx.random.randint(1, 10, shape=(2,)).tolist())
 
         else:
+            kernel_size = mx.random.randint(1, 10).item()
             stride = mx.random.randint(1, 5).item()
             padding = mx.random.randint(0, 5).item()
-            kernel_size = mx.random.randint(1, 10).item()
 
         x = mx.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
         x_torch = torch.from_numpy(np.array(x))
@@ -47,8 +87,8 @@ def test_nn_conv2d(pytest_configure):
             out_channels=co.item(),
             kernel_size=kernel_size,
             stride=stride,
-            bias=pytest.use_bias,
             padding=padding,
+            bias=pytest.use_bias,
             device=pytest.device
         )
 

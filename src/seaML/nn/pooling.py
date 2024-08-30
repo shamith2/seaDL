@@ -16,7 +16,7 @@ class MaxPool2d(nn.Module):
             kernel_size: Union[int, tuple[int, int]],
             stride: Optional[Union[int, tuple[int, int]]] = None,
             padding: Union[int, tuple[int, int]] = 1,
-            device: Union[mx.DeviceType, None] = None
+            device: Optional[mx.DeviceType] = None
     ):
         """
         Like torch.nn.MaxPool2d with dilation = 1 and ceil_mode = False
@@ -45,13 +45,13 @@ class MaxPool2d(nn.Module):
         return out
 
     def _extra_repr(self) -> str:
-        return ""
+        return super()._extra_repr()
 
 
 class AveragePool2d(nn.Module):
     def __init__(
             self,
-            device: Union[mx.DeviceType, None] = None
+            device: Optional[mx.DeviceType] = None
     ):
         super().__init__()
 
@@ -71,5 +71,5 @@ class AveragePool2d(nn.Module):
         )
 
     def _extra_repr(self) -> str:
-        return ""
+        return super()._extra_repr()
 

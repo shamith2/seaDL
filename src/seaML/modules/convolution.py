@@ -1,4 +1,4 @@
-from typing import Union, Optional, Dict
+from typing import Union, Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
@@ -73,7 +73,7 @@ def conv1d_strided(
     weights: mx.array,
     stride: int = 1,
     padding: int = 0,
-    device: Union[mx.DeviceType, None] = None
+    device: Optional[mx.DeviceType] = None
 ) -> mx.array:
     '''
     Like torch.nn.functional.conv1d using bias=False
@@ -123,7 +123,7 @@ def conv2d_strided(
     weights: mx.array,
     stride: Union[int, tuple[int, int]] = 1,
     padding: Union[int, tuple[int, int]] = 0,
-    device: Union[mx.DeviceType, None] = None
+    device: Optional[mx.DeviceType] = None
 ) -> mx.array:
     '''
     Like torch.nn.functional.conv2d using bias=False
