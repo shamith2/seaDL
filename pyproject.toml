@@ -23,6 +23,7 @@ dependencies = [
     "pip",
     "tzdata",
     "wheel",
+    "cmake",
     "pytest",
     "mlx",
     "numpy<2.0.0",

@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 import mlx.core as mx
 import pytest
@@ -37,13 +36,14 @@ def test_nn_maxpool2d(pytest_configure):
         x = mx.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
         x_torch = torch.from_numpy(np.array(x))
 
-        my_output = MaxPool2d(
+        my_maxpool2d = MaxPool2d(
             kernel_size,
             stride=stride,
             padding=padding,
             device=pytest.device
-        )(x)
+        )
 
+        my_output = my_maxpool2d(x)
         my_output_torch = torch.from_numpy(np.array(my_output))
 
         torch_output = nn.MaxPool2d(
