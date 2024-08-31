@@ -3,14 +3,14 @@ from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
 import mlx.core as mx
-import mlx.nn as nn
+from mlx.nn import Module
 
 from seaML.nn.functional import _pair_value
 from seaML.nn.functional import maxpool2d, averagepool2d
 
 
 @jaxtyped(typechecker=typechecker)
-class MaxPool2d(nn.Module):
+class MaxPool2d(Module):
     def __init__(
             self,
             kernel_size: Union[int, tuple[int, int]],
@@ -48,7 +48,7 @@ class MaxPool2d(nn.Module):
         return super()._extra_repr()
 
 
-class AveragePool2d(nn.Module):
+class AveragePool2d(Module):
     def __init__(
             self,
             device: Optional[mx.DeviceType] = None
