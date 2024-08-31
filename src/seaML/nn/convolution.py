@@ -6,8 +6,8 @@ import math
 import mlx.core as mx
 import mlx.nn as nn
 
-from ..modules.utils import _pair_value
-from ..modules.convolution import conv1d_strided, conv2d_strided
+from seaML.nn.functional import _pair_value
+from seaML.nn.functional import conv1d_strided, conv2d_strided
 
 
 @jaxtyped(typechecker=typechecker)

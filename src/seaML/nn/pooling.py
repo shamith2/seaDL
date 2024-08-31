@@ -5,8 +5,8 @@ from typeguard import typechecked as typechecker
 import mlx.core as mx
 import mlx.nn as nn
 
-from ..modules.utils import _pair_value
-from ..modules.pooling import maxpool2d_strided, averagepool2d
+from seaML.nn.functional import _pair_value
+from seaML.nn.functional import maxpool2d_strided, averagepool2d
 
 
 @jaxtyped(typechecker=typechecker)

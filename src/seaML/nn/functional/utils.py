@@ -6,7 +6,7 @@ import mlx.core as mx
 
 
 @jaxtyped(typechecker=typechecker)
-def _get_strides(
+def get_strides(
         shape: tuple,
         device: mx.DeviceType
 ):

@@ -4,7 +4,7 @@ from typeguard import typechecked as typechecker
 
 import mlx.core as mx
 
-from .utils import _get_strides, _pair_value
+from .utils import get_strides, _pair_value
 from .convolution import pad2d_strided
 
 
@@ -41,7 +41,7 @@ def maxpool2d_strided(
     )
 
     b, ic, h, w = pad_x.shape
-    x_dimb, x_dimc, x_dimh, x_dimw = _get_strides(pad_x.shape, device)
+    x_dimb, x_dimc, x_dimh, x_dimw = get_strides(pad_x.shape, device)
 
     x_prime = mx.as_strided(
         pad_x,

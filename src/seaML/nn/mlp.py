@@ -5,8 +5,8 @@ from typeguard import typechecked as typechecker
 import mlx.core as mx
 import mlx.nn as nn
 
-from .activation import ReLU
-from .linear import Linear, Flatten
+from seaML.nn.functional import ReLU
+from seaML.nn.linear import Linear, Flatten
 
 
 @jaxtyped(typechecker=typechecker)

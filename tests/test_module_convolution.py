@@ -5,7 +5,7 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
-from seaML.modules import pad1d_strided, pad2d_strided, conv1d_strided, conv2d_strided, maxpool2d_strided
+from seaML.nn.functional import pad1d_strided, pad2d_strided, conv1d_strided, conv2d_strided, maxpool2d_strided
 
 
 @pytest.fixture

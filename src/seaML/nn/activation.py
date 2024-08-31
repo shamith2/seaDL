@@ -5,7 +5,7 @@ from typeguard import typechecked as typechecker
 import mlx.core as mx
 import mlx.nn as nn
 
-from ..modules.activation import relu
+from seaML.nn.functional import relu
 
 
 @jaxtyped(typechecker=typechecker)

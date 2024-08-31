@@ -4,7 +4,7 @@ from typeguard import typechecked as typechecker
 
 import mlx.core as mx
 
-from .utils import _get_strides, _pair_value
+from .utils import get_strides, _pair_value
 
 
 @jaxtyped(typechecker=typechecker)
@@ -93,7 +93,7 @@ def conv1d_strided(
         device=device
     )
 
-    x_dim0, x_dim1, x_dim2 = _get_strides(pad_x.shape, device)
+    x_dim0, x_dim1, x_dim2 = get_strides(pad_x.shape, device)
 
     b, ic, w = pad_x.shape
     _, w_ic, kw = weights.shape
@@ -147,7 +147,7 @@ def conv2d_strided(
         device=device
     )
 
-    x_dimb, x_dimc, x_dimh, x_dimw = _get_strides(pad_x.shape, device)
+    x_dimb, x_dimc, x_dimh, x_dimw = get_strides(pad_x.shape, device)
 
     b, ic, h, w = pad_x.shape
     _, w_ic, kh, kw = weights.shape
