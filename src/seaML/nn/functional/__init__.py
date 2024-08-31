@@ -1,5 +1,5 @@
 # imports
 from .activation import relu
-from .convolution import pad1d_strided, pad2d_strided, conv1d_strided, conv2d_strided
-from .pooling import maxpool2d_strided, averagepool2d
+from .convolution import pad1d, pad2d, conv1d, conv2d
+from .pooling import maxpool2d, averagepool2d
 from .utils import get_strides, _pair_value

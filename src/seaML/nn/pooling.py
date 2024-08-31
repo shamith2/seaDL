@@ -6,7 +6,7 @@ import mlx.core as mx
 import mlx.nn as nn
 
 from seaML.nn.functional import _pair_value
-from seaML.nn.functional import maxpool2d_strided, averagepool2d
+from seaML.nn.functional import maxpool2d, averagepool2d
 
 
 @jaxtyped(typechecker=typechecker)
@@ -34,7 +34,7 @@ class MaxPool2d(nn.Module):
             x: mx.array
     ) -> mx.array:
         '''Call the functional version of max_pool2d'''
-        out = maxpool2d_strided(
+        out = maxpool2d(
             x,
             self.kernel_size,
             stride=self.stride,

@@ -7,7 +7,7 @@ import mlx.core as mx
 import mlx.nn as nn
 
 from seaML.nn.functional import _pair_value
-from seaML.nn.functional import conv1d_strided, conv2d_strided
+from seaML.nn.functional import conv1d, conv2d
 
 
 @jaxtyped(typechecker=typechecker)
@@ -55,7 +55,7 @@ class Conv1d(nn.Module):
             x: mx.array
     ) -> mx.array:
         '''Apply the functional conv1d'''
-        out = conv1d_strided(
+        out = conv1d(
             x,
             self.weight,
             stride=self.stride,
@@ -122,7 +122,7 @@ class Conv2d(nn.Module):
             x: mx.array
     ) -> mx.array:
         '''Apply the functional conv2d'''
-        out = conv2d_strided(
+        out = conv2d(
             x,
             self.weight,
             stride=self.stride,

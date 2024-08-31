@@ -5,7 +5,7 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
-from seaML.nn.functional import pad1d_strided, pad2d_strided, conv1d_strided, conv2d_strided, maxpool2d_strided
+from seaML.nn.functional import pad1d, pad2d, conv1d, conv2d, maxpool2d
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def test_maxpool2d(pytest_configure):
         x = mx.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
         x_torch = torch.from_numpy(np.array(x))
 
-        my_output = maxpool2d_strided(
+        my_output = maxpool2d(
             x,
             kernel_size,
             stride=stride,

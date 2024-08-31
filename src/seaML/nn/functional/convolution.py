@@ -8,7 +8,7 @@ from .utils import get_strides, _pair_value
 
 
 @jaxtyped(typechecker=typechecker)
-def pad1d_strided(
+def pad1d(
         x: mx.array,
         left: int,
         right: int,
@@ -37,7 +37,7 @@ def pad1d_strided(
 
 
 @jaxtyped(typechecker=typechecker)
-def pad2d_strided(
+def pad2d(
         x: mx.array,
         top: int,
         bottom: int,
@@ -68,7 +68,7 @@ def pad2d_strided(
 
 
 @jaxtyped(typechecker=typechecker)
-def conv1d_strided(
+def conv1d(
     x: mx.array,
     weights: mx.array,
     stride: int = 1,
@@ -85,7 +85,7 @@ def conv1d_strided(
     '''
     device = mx.gpu if not device else device
 
-    pad_x = pad1d_strided(
+    pad_x = pad1d(
         x,
         left=padding,
         right=padding,
@@ -118,7 +118,7 @@ def conv1d_strided(
 
 
 @jaxtyped(typechecker=typechecker)
-def conv2d_strided(
+def conv2d(
     x: mx.array,
     weights: mx.array,
     stride: Union[int, tuple[int, int]] = 1,
@@ -137,7 +137,7 @@ def conv2d_strided(
 
     stride, padding = _pair_value(stride), _pair_value(padding)
 
-    pad_x = pad2d_strided(
+    pad_x = pad2d(
         x,
         top=padding[0],
         bottom=padding[0],

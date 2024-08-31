@@ -5,11 +5,11 @@ from typeguard import typechecked as typechecker
 import mlx.core as mx
 
 from .utils import get_strides, _pair_value
-from .convolution import pad2d_strided
+from .convolution import pad2d
 
 
 @jaxtyped(typechecker=typechecker)
-def maxpool2d_strided(
+def maxpool2d(
     x: mx.array,
     kernel_size: Union[int, tuple[int, int]],
     stride: Optional[Union[int, tuple[int, int]]] = None,
@@ -30,7 +30,7 @@ def maxpool2d_strided(
     stride = _pair_value(stride) if stride else _pair_value(kernel_size)
     padding = _pair_value(padding)
 
-    pad_x = pad2d_strided(
+    pad_x = pad2d(
         x,
         top=padding[0],
         bottom=padding[0],
