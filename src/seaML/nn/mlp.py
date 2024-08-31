@@ -3,14 +3,14 @@ from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
 import mlx.core as mx
-import mlx.nn as nn
+from mlx.nn import Module
 
 from seaML.nn.functional import ReLU
 from seaML.nn.linear import Linear, Flatten
 
 
 @jaxtyped(typechecker=typechecker)
-class SimpleMLP(nn.Module):
+class SimpleMLP(Module):
     def __init__(
             self,
             in_features: int = 28*28,

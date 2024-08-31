@@ -4,11 +4,11 @@ from typeguard import typechecked as typechecker
 
 from einops.array_api import rearrange
 import mlx.core as mx
-import mlx.nn as nn
+from mlx.nn import Module
 
 
 @jaxtyped(typechecker=typechecker)
-class BatchNorm2d(nn.Module):
+class BatchNorm2d(Module):
     def __init__(
             self,
             num_features: int,

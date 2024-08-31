@@ -6,11 +6,11 @@ import string, random
 
 import math
 import mlx.core as mx
-import mlx.nn as nn
+from mlx.nn import Module
 
 
 @jaxtyped(typechecker=typechecker)
-class Linear(nn.Module):
+class Linear(Module):
     def __init__(
             self,
             in_features: int,
@@ -75,7 +75,7 @@ class Linear(nn.Module):
 
 
 @jaxtyped(typechecker=typechecker)
-class Flatten(nn.Module):
+class Flatten(Module):
     def __init__(
             self,
             start_dim: int = 1,

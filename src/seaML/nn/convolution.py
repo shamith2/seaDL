@@ -4,14 +4,14 @@ from typeguard import typechecked as typechecker
 
 import math
 import mlx.core as mx
-import mlx.nn as nn
+from mlx.nn import Module
 
 from seaML.nn.functional import _pair_value
 from seaML.nn.functional import conv1d, conv2d
 
 
 @jaxtyped(typechecker=typechecker)
-class Conv1d(nn.Module):
+class Conv1d(Module):
     def __init__(
         self,
         in_channels: int,
@@ -77,7 +77,7 @@ class Conv1d(nn.Module):
 
 
 @jaxtyped(typechecker=typechecker)
-class Conv2d(nn.Module):
+class Conv2d(Module):
     def __init__(
         self,
         in_channels: int,

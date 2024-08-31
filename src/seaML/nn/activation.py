@@ -3,13 +3,13 @@ from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
 import mlx.core as mx
-import mlx.nn as nn
+from mlx.nn import Module
 
 from seaML.nn.functional import relu
 
 
 @jaxtyped(typechecker=typechecker)
-class ReLU(nn.Module):
+class ReLU(Module):
     def __init__(
             self,
             inplace: bool = False,
