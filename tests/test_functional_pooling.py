@@ -1,11 +1,10 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import mlx.core as mx
 import pytest
 
-from seaML.nn.functional import pad1d, pad2d, conv1d, conv2d, maxpool2d
+from seaML.nn.functional import maxpool2d
 
 
 @pytest.fixture
@@ -39,7 +38,7 @@ def test_maxpool2d(pytest_configure):
 
         my_output_torch = torch.from_numpy(np.array(my_output))
 
-        torch_output = torch.max_pool2d(
+        torch_output = F.max_pool2d(
             x_torch,
             kernel_size,
             stride=stride,
