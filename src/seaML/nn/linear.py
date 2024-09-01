@@ -27,6 +27,9 @@ class Linear(Module):
         self._use_einsum = True
         self.device = mx.gpu if not device else device
 
+        self.in_features = in_features
+        self.out_features = out_features
+
         scale = math.sqrt(1.0 / in_features)
 
         self.weight = mx.random.uniform(
@@ -53,7 +56,8 @@ class Linear(Module):
         '''
         # y = xW.T + b
         if self._use_einsum:
-            subscript = ' '.join([random.choice(string.ascii_lowercase) for _ in range(len(x.shape[:-1]))])
+            # subscript indices should not repeat with random.sample
+            subscript = ' '.join(random.sample(string.ascii_lowercase, len(x.shape[:-1])))
 
             # "..." does work with mlx.core.einsum
             y = mx.einsum(
@@ -71,7 +75,9 @@ class Linear(Module):
         return y
 
     def _extra_repr(self) -> str:
-        return "in_features: {} out_features: {} bias: {}".format(self.in_features, self.out_features, self.bias)
+        return "in_features: {}, out_features: {}, bias_shape: {}".format(
+            self.in_features, self.out_features, self.bias.shape if self.bias is not None else None
+        )
 
 
 @jaxtyped(typechecker=typechecker)

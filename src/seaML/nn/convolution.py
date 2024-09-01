@@ -6,7 +6,7 @@ import math
 import mlx.core as mx
 from mlx.nn import Module
 
-from seaML.nn.functional import _pair_value
+from seaML.utils import _pair_value
 from seaML.nn.functional import conv1d, conv2d
 
 

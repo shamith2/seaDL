@@ -5,7 +5,7 @@ from typeguard import typechecked as typechecker
 import mlx.core as mx
 from mlx.nn import Module
 
-from seaML.nn.functional import _pair_value
+from seaML.utils import _pair_value
 from seaML.nn.functional import maxpool2d, averagepool2d
 
 
@@ -33,7 +33,7 @@ class MaxPool2d(Module):
             self,
             x: mx.array
     ) -> mx.array:
-        '''Call the functional version of max_pool2d'''
+        '''call the functional version of max_pool2d'''
         out = maxpool2d(
             x,
             self.kernel_size,
