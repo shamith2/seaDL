@@ -18,6 +18,7 @@ class Linear(Module):
             in_features: int,
             out_features: int,
             bias: bool = True,
+            einsum_skipdims: int = 0,
             device: Optional[mx.DeviceType] = None,
             dtype: Optional[mx.Dtype] = mx.float32
     ):
@@ -26,7 +27,16 @@ class Linear(Module):
         '''
         super().__init__()
 
-        self.use_einsum = False
+        # need to get input for einsum notation subscript
+        # since "..." does work with mlx.core.einsum,
+        # atleast not like numpy.einsum
+        if einsum_skipdims:
+            self.use_einsum = True
+            self.einsum_skipdims = einsum_skipdims
+
+        else:
+            self.use_einsum = False
+
         self.device = mx.gpu if not device else device
 
         self.in_features = in_features
@@ -68,14 +78,7 @@ class Linear(Module):
         # y = xW.T + b
         if self.use_einsum:
             # subscript indices should not repeat with random.sample
-            subscript = ' '.join(random.sample(string.ascii_lowercase, len(x.shape[:-1])))
-
-            # "..." does work with mlx.core.einsum
-            # y = mx.einsum(
-            #     subscript + " i, o i -> " + subscript + " o",
-            #     x, self.weight,
-            #     stream=self.device
-            # )
+            subscript = ' '.join(random.sample(string.ascii_lowercase, self.einsum_skipdims))
 
             y = x.einsum(
                 subscript + " i, o i -> " + subscript + " o",
@@ -83,7 +86,6 @@ class Linear(Module):
             )
 
         else:
-            # y = mx.matmul(x, self.weight.T, stream=self.device)
             y = x.matmul(self.weight.transpose())
 
         if self.bias is not None:
@@ -123,10 +125,6 @@ class Flatten(Module):
         in_shape = x.shape
 
         self.end_dim = len(in_shape) + self.end_dim if self.end_dim < 0 else self.end_dim
-
-        # shape = (in_shape[:self.start_dim] +
-        #         (mx.prod(mx.array(in_shape[self.start_dim:self.end_dim+1]), stream=self.device).tolist(),) +
-        #         in_shape[self.end_dim+1:])
 
         shape = (in_shape[:self.start_dim] +
                 (prod(in_shape[self.start_dim:self.end_dim+1]),) +

@@ -58,7 +58,6 @@ def test_module(pytest_configure):
             super().__init__()
 
             self.linear = nn.Linear(3, 2)
-            self.linear.use_einsum = False
 
             self.relu = nn.ReLU()
         

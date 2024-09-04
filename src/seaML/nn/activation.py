@@ -26,8 +26,6 @@ class ReLU(Module):
         """
         Like torch.nn.ReLU using functional relu
         """
-        # return relu(x, self.device)
-
         return relu(x)
 
 

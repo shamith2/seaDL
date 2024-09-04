@@ -540,10 +540,9 @@ class Tensor(mx.array):
 
         node = Operation(
             name='einsum',
-            operation=lambda ts: mx.einsum(subscripts,
-                                           *(t for t in ts)),
+            operation=lambda *tensors: mx.einsum(subscripts, *tensors),
             inputs=(self,) + tensors,
-            grad_fn=None
+            grad_fn=None # Not yet Implemented
         )
 
         result = Tensor(

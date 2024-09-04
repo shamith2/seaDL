@@ -15,7 +15,5 @@ def relu(
     """
     Like torch.nn.functional.relu
     """
-    # return mx.maximum(x, 0.0, stream=device)
-
     return x.maximum(0.0)
 

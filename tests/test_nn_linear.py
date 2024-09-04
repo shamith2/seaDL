@@ -21,11 +21,13 @@ def test_nn_flatten(pytest_configure):
 
 
 def test_nn_linear(pytest_configure):
-    x = mx.random.normal(shape=(10, 512))
+    x = mx.random.normal(shape=(2, 10, 512))
     x_torch = torch.from_numpy(np.array(x))
 
     linear = nn.Linear(512, 64, bias=True, device=pytest.device)
     torch_linear = torch.nn.Linear(512, 64, bias=True)
+
+    einsum_linear = nn.Linear(512, 64, bias=True, einsum_skipdims=2, device=pytest.device)
 
     params = linear._parameters
 
@@ -37,12 +39,19 @@ def test_nn_linear(pytest_configure):
     linear.weight = nn.Tensor(np.array(torch_linear.weight.detach().clone()))
     linear.bias = nn.Tensor(np.array(torch_linear.bias.detach().clone()))
 
+    einsum_linear.weight = nn.Tensor(np.array(torch_linear.weight.detach().clone()))
+    einsum_linear.bias = nn.Tensor(np.array(torch_linear.bias.detach().clone()))
+
     actual = linear(nn.Tensor(x)).fire()
     actual_torch = torch.from_numpy(np.array(actual))
+
+    actual_einsum = einsum_linear(nn.Tensor(x)).fire()
+    actual_einsum_torch = torch.from_numpy(np.array(actual_einsum))
 
     expected = torch_linear(x_torch)
 
     torch.testing.assert_close(actual_torch, expected)
+    torch.testing.assert_close(actual_einsum_torch, expected)
 
 
 def test_nn_linear_no_bias(pytest_configure):
