@@ -6,7 +6,7 @@ import mlx.core as mx
 
 from .base import Module
 from .functional import maxpool2d, averagepool2d
-from seaML.utils import _pair_value
+from ..utils import _pair_value
 
 
 @jaxtyped(typechecker=typechecker)
@@ -70,6 +70,6 @@ class AveragePool2d(Module):
             device=self.device
         )
 
-    def _extra_repr(self) -> str:
-        return super()._extra_repr()
+    def extra_repr(self) -> str:
+        return super().extra_repr()
 

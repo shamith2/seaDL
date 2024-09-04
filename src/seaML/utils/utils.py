@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import mlx.core as mx
 
-from ..nn.base import Tensor, Operation
+from ..base import Tensor
 
 from graphviz import Digraph
 

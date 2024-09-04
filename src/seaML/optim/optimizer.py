@@ -4,7 +4,8 @@ from typeguard import typechecked as typechecker
 
 import mlx.core as mx
 
-from ..nn.base import Module
+from ..base import Device
+from ..nn import Module
 
 
 @jaxtyped(typechecker=typechecker)
@@ -17,7 +18,7 @@ class SGD:
         dampening: Optional[float] = 0.0,
         weight_decay: Optional[float] = 0.0,
         nesterov: Optional[bool] = False,
-        device: Optional[mx.DeviceType] = None
+        device: Optional[Device] = None
     ):
         '''
         Implements SGD with momentum
@@ -28,8 +29,6 @@ class SGD:
         '''
         if nesterov and (momentum <= 0 or dampening):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
-
-        self.device = mx.gpu if not device else device
 
         train_params: dict = model.trainable_parameters()
 

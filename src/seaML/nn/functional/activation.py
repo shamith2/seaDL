@@ -2,15 +2,13 @@ from typing import Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-import mlx.core as mx
-
-from ...nn.base import Tensor
+from ...base import Tensor, Device
 
 
 @jaxtyped(typechecker=typechecker)
 def relu(
         x: Tensor,
-        device: Optional[mx.DeviceType] = None
+        device: Optional[Device] = None
 ) -> Tensor:
     """
     Like torch.nn.functional.relu

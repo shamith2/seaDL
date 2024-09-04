@@ -2,9 +2,8 @@ from typing import Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-import mlx.core as mx
-
-from .base import Tensor, Module
+from ..base import Tensor, Device
+from .base import Module
 from .functional import relu
 
 
@@ -12,7 +11,7 @@ from .functional import relu
 class ReLU(Module):
     def __init__(
             self,
-            device: Optional[mx.DeviceType] = None
+            device: Optional[Device] = None
     ):
         super().__init__()
 

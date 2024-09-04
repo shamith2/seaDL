@@ -2,12 +2,11 @@ from typing import Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-import string, random
-
 import math
-import mlx.core as mx
 
-from .base import Tensor, Parameter, Module
+from ..base import Tensor, Device, DataType
+from .base import Parameter, Module
+from ..random import uniform
 from ..utils import prod
 
 
@@ -18,9 +17,9 @@ class Linear(Module):
             in_features: int,
             out_features: int,
             bias: bool = True,
-            einsum_skipdims: int = 0,
-            device: Optional[mx.DeviceType] = None,
-            dtype: Optional[mx.Dtype] = mx.float32
+            subscripts: Optional[str] = '',
+            device: Optional[Device] = None,
+            dtype: Optional[DataType] = DataType('float32')
     ):
         '''
         A simple linear (affine) transformation
@@ -30,14 +29,12 @@ class Linear(Module):
         # need to get input for einsum notation subscript
         # since "..." does work with mlx.core.einsum,
         # atleast not like numpy.einsum
-        if einsum_skipdims:
+        if subscripts:
             self.use_einsum = True
-            self.einsum_skipdims = einsum_skipdims
+            self.subscripts = subscripts
 
         else:
             self.use_einsum = False
-
-        self.device = mx.gpu if not device else device
 
         self.in_features = in_features
         self.out_features = out_features
@@ -45,20 +42,20 @@ class Linear(Module):
         scale = math.sqrt(1.0 / in_features)
 
         self.weight = Parameter(
-            mx.random.uniform(
+            uniform(
+                shape=(out_features, in_features),
                 low=-scale,
                 high=scale,
-                shape=(out_features, in_features),
                 dtype=dtype
             )
         )
 
         if bias:
             self.bias = Parameter(
-                mx.random.uniform(
+                uniform(
+                    shape=(out_features,),
                     low=-scale,
                     high=scale,
-                    shape=(out_features,),
                     dtype=dtype
                 )
             )
@@ -70,18 +67,15 @@ class Linear(Module):
     def __call__(
             self,
             x: Tensor
-    ) -> mx.array:
+    ) -> Tensor:
         '''
         x: shape (*, in_features)
         Return: shape (*, out_features)
         '''
         # y = xW.T + b
         if self.use_einsum:
-            # subscript indices should not repeat with random.sample
-            subscript = ' '.join(random.sample(string.ascii_lowercase, self.einsum_skipdims))
-
             y = x.einsum(
-                subscript + " i, o i -> " + subscript + " o",
+                self.subscripts,
                 self.weight
             )
 
@@ -106,11 +100,9 @@ class Flatten(Module):
             self,
             start_dim: int = 1,
             end_dim: int = -1,
-            device: Optional[mx.DeviceType] = None
+            device: Optional[Device] = None
     ):
         super().__init__()
-
-        self.device = mx.gpu if not device else device
         
         self.start_dim = start_dim
         self.end_dim = end_dim

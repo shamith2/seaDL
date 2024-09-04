@@ -4,8 +4,8 @@ from typeguard import typechecked as typechecker
 
 import mlx.core as mx
 
-from ..base import Parameter
-from seaML.utils import get_strides, _pair_value
+from ...nn.base import Parameter
+from ...utils import get_strides, _pair_value
 
 
 @jaxtyped(typechecker=typechecker)

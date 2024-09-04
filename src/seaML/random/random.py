@@ -1,0 +1,67 @@
+# Wrapper fucntions for relevant random library functions from backend
+
+from typing import Any, Optional
+from jaxtyping import jaxtyped
+from typeguard import typechecked as typechecker
+
+from ..config import config, ArrayType
+from ..base import Tensor, DataType
+
+
+# @jaxtyped(typechecker=typechecker)
+def uniform(
+        shape: tuple,
+        low: float = 0.0,
+        high: float = 1.0,
+        dtype: Optional[DataType] = DataType('float32')
+):
+    if config.backend_library == 'mlx':
+        data = config.backend.random.uniform(
+                    low=low,
+                    high=high,
+                    shape=shape
+                )
+
+    else:
+        rng = config.backend.random.default_rng()
+
+        data=rng.uniform(
+            low=low,
+            high=high,
+            size=shape
+        )
+
+    return Tensor(
+        data=data,
+        requires_grad=False
+    ).astype(dtype)
+
+
+@jaxtyped(typechecker=typechecker)
+def normal(
+        shape: tuple,
+        mean: float = 0.0,
+        scale: float = 1.0,
+        dtype: Optional[DataType] = DataType('float32')
+):
+    if config.backend_library == 'mlx':
+        data=config.backend.random.normal(
+                shape=shape,
+                loc=mean,
+                scale=scale
+            )
+
+    else:
+        rng = config.backend.random.default_rng()
+
+        data=rng.normal(
+            loc=mean,
+            scale=scale,
+            size=shape
+        )
+
+    return Tensor(
+        data=data,
+        requires_grad=False
+    ).astype(dtype)
+
