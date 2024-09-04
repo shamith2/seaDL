@@ -6,7 +6,9 @@ import string, random
 
 import math
 import mlx.core as mx
-from mlx.nn import Module
+
+from .base import Tensor, Parameter, Module
+from ..utils import prod
 
 
 @jaxtyped(typechecker=typechecker)
@@ -24,7 +26,7 @@ class Linear(Module):
         '''
         super().__init__()
 
-        self._use_einsum = True
+        self.use_einsum = False
         self.device = mx.gpu if not device else device
 
         self.in_features = in_features
@@ -32,49 +34,65 @@ class Linear(Module):
 
         scale = math.sqrt(1.0 / in_features)
 
-        self.weight = mx.random.uniform(
-            low=-scale,
-            high=scale,
-            shape=(out_features, in_features),
-            dtype=dtype
+        self.weight = Parameter(
+            mx.random.uniform(
+                low=-scale,
+                high=scale,
+                shape=(out_features, in_features),
+                dtype=dtype
+            )
         )
 
-        self.bias = mx.random.uniform(
-            low=-scale,
-            high=scale,
-            shape=(out_features,),
-            dtype=dtype
-        ) if bias else None
+        if bias:
+            self.bias = Parameter(
+                mx.random.uniform(
+                    low=-scale,
+                    high=scale,
+                    shape=(out_features,),
+                    dtype=dtype
+                )
+            )
+
+        else:
+            self.bias = None
+
 
     def __call__(
             self,
-            x: mx.array
+            x: Tensor
     ) -> mx.array:
         '''
         x: shape (*, in_features)
         Return: shape (*, out_features)
         '''
         # y = xW.T + b
-        if self._use_einsum:
+        if self.use_einsum:
             # subscript indices should not repeat with random.sample
             subscript = ' '.join(random.sample(string.ascii_lowercase, len(x.shape[:-1])))
 
             # "..." does work with mlx.core.einsum
-            y = mx.einsum(
+            # y = mx.einsum(
+            #     subscript + " i, o i -> " + subscript + " o",
+            #     x, self.weight,
+            #     stream=self.device
+            # )
+
+            y = x.einsum(
                 subscript + " i, o i -> " + subscript + " o",
-                x, self.weight,
-                stream=self.device
+                self.weight
             )
 
         else:
-            y = mx.matmul(x, self.weight.T, stream=self.device)
+            # y = mx.matmul(x, self.weight.T, stream=self.device)
+            y = x.matmul(self.weight.transpose())
 
         if self.bias is not None:
-            y += self.bias
+            y = y + self.bias
 
         return y
 
-    def _extra_repr(self) -> str:
+
+    def extra_repr(self) -> str:
         return "in_features: {}, out_features: {}, bias_shape: {}".format(
             self.in_features, self.out_features, self.bias.shape if self.bias is not None else None
         )
@@ -97,8 +115,8 @@ class Flatten(Module):
 
     def __call__(
             self,
-            x: mx.array
-    ) -> mx.array:
+            x: Tensor
+    ) -> Tensor:
         '''
         Flatten out dimensions from start_dim to end_dim, inclusive of both
         '''
@@ -106,12 +124,18 @@ class Flatten(Module):
 
         self.end_dim = len(in_shape) + self.end_dim if self.end_dim < 0 else self.end_dim
 
+        # shape = (in_shape[:self.start_dim] +
+        #         (mx.prod(mx.array(in_shape[self.start_dim:self.end_dim+1]), stream=self.device).tolist(),) +
+        #         in_shape[self.end_dim+1:])
+
         shape = (in_shape[:self.start_dim] +
-                (mx.prod(mx.array(in_shape[self.start_dim:self.end_dim+1]), stream=self.device).tolist(),) +
+                (prod(in_shape[self.start_dim:self.end_dim+1]),) +
                 in_shape[self.end_dim+1:])
 
-        return x.reshape(*shape, stream=self.device)
+        # return x.reshape(*shape, stream=self.device)
+        return x.reshape(shape)
 
-    def _extra_repr(self) -> str:
-        return super()._extra_repr()
+
+    def extra_repr(self) -> str:
+        return super().extra_repr()
 

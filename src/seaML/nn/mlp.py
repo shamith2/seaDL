@@ -3,10 +3,10 @@ from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
 import mlx.core as mx
-from mlx.nn import Module
 
-from seaML.nn.functional import ReLU
-from seaML.nn.linear import Linear, Flatten
+from .base import Module
+from .activation import ReLU
+from .linear import Linear, Flatten
 
 
 @jaxtyped(typechecker=typechecker)

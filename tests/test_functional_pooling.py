@@ -4,7 +4,7 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
-from seaML.nn.functional import maxpool2d
+import seaML.nn as nn
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def test_maxpool2d(pytest_configure):
         x = mx.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
         x_torch = torch.from_numpy(np.array(x))
 
-        my_output = maxpool2d(
+        my_output = nn.functional.maxpool2d(
             x,
             kernel_size,
             stride=stride,

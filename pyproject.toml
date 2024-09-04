@@ -26,8 +26,10 @@ dependencies = [
     "cmake",
     "pytest",
     "mlx",
-    "numpy<2.0.0",
-    "torch"
+    "numpy",
+    "torch",
+    "jaxtyping",
+    "typechecker"
 ]
 
 [tool.hatch.version]

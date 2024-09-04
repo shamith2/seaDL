@@ -1,7 +1,7 @@
 import mlx.core as mx
 import pytest
 
-from seaML.nn import BatchNorm2d
+import seaML.nn as nn
 
 
 @pytest.fixture
@@ -12,17 +12,17 @@ def pytest_configure():
 
 
 def test_batchnorm2d_module(pytest_configure):
-    bn = BatchNorm2d(pytest.num_features, device=pytest.device)
+    bn = nn.BatchNorm2d(pytest.num_features, device=pytest.device)
 
-    params = bn.parameters()
-    t_params = bn.trainable_parameters()
+    params = bn._parameters
+    t_params = bn._trainable_parameters
 
     assert bn.num_features == pytest.num_features
 
-    assert isinstance(bn.weight, mx.array), f"weight has wrong type: {type(bn.weight)}"
+    assert isinstance(bn.weight, nn.Parameter), f"weight has wrong type: {type(bn.weight)}"
     assert bn.weight.shape == params['weight'].shape
 
-    assert isinstance(bn.bias, mx.array), f"bias has wrong type: {type(bn.bias)}"
+    assert isinstance(bn.bias, nn.Parameter), f"bias has wrong type: {type(bn.bias)}"
     assert bn.bias.shape == params['bias'].shape
 
     assert isinstance(bn.running_mean, mx.array), f"running_mean has wrong type: {type(bn.running_mean)}"
@@ -38,7 +38,7 @@ def test_batchnorm2d_forward(pytest_configure):
     '''
     For each channel, mean should be very close to 0 and std kinda close to 1 (because of eps)
     '''
-    bn = BatchNorm2d(pytest.num_features, device=pytest.device)
+    bn = nn.BatchNorm2d(pytest.num_features, device=pytest.device)
 
     assert bn.training
 
@@ -56,7 +56,7 @@ def test_batchnorm2d_running_mean(pytest_configure):
     Over repeated forward calls with the same data in train mode,
     the running mean should converge to the actual mean
     '''
-    bn = BatchNorm2d(pytest.num_features, momentum=0.6, device=pytest.device)
+    bn = nn.BatchNorm2d(pytest.num_features, momentum=0.6, device=pytest.device)
     assert bn.training
 
     x = mx.arange(12, dtype=mx.float32).reshape((2, 3, 2, 1))

@@ -8,9 +8,9 @@ from sklearn.datasets import make_moons
 from sklearn.model_selection import train_test_split as sk_train_test_split
 
 import mlx.core as mx
-from mlx.nn import Module
 
 import seaML.nn as nn
+from seaML.nn import Module
 from seaML.optim import SGD
 from seaML.utils import DataLoader as mxDataLoader
 from seaML.utils import train_test_split

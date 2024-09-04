@@ -3,10 +3,10 @@ from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
 import mlx.core as mx
-from mlx.nn import Module
 
+from .base import Module
+from .functional import maxpool2d, averagepool2d
 from seaML.utils import _pair_value
-from seaML.nn.functional import maxpool2d, averagepool2d
 
 
 @jaxtyped(typechecker=typechecker)

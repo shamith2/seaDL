@@ -4,7 +4,7 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
-from seaML.nn.functional import pad1d, pad2d, conv1d, conv2d
+import seaML.nn as nn
 
 
 @pytest.fixture
@@ -19,11 +19,11 @@ def test_pad1d(pytest_configure):
     '''
     x = mx.arange(4, dtype=mx.float32).reshape((1, 1, 4))
 
-    actual = pad1d(x, 1, 3, -2.0, pytest.device)
+    actual = nn.functional.pad1d(x, 1, 3, -2.0, pytest.device)
     expected = mx.array([[[-2.0, 0.0, 1.0, 2.0, 3.0, -2.0, -2.0, -2.0]]])
     assert mx.allclose(actual, expected).all()
 
-    actual = pad1d(x, 1, 0, -2.0, pytest.device)
+    actual = nn.functional.pad1d(x, 1, 0, -2.0, pytest.device)
     expected = mx.array([[[-2.0, 0.0, 1.0, 2.0, 3.0]]])
     assert mx.allclose(actual, expected).all()
 
@@ -35,7 +35,7 @@ def test_pad1d_multi_channel(pytest_configure):
     x = mx.arange(4, dtype=mx.float32).reshape((1, 2, 2))
     expected = mx.array([[[0.0, 1.0, -3.0, -3.0], [2.0, 3.0, -3.0, -3.0]]])
 
-    actual = pad1d(x, 0, 2, -3.0, pytest.device)
+    actual = nn.functional.pad1d(x, 0, 2, -3.0, pytest.device)
     assert mx.allclose(actual, expected).all()
 
 
@@ -55,7 +55,7 @@ def test_pad2d(pytest_configure):
     ]]])
 
 
-    actual = pad2d(x, 2, 3, 0, 1, 0.0, pytest.device)
+    actual = nn.functional.pad2d(x, 2, 3, 0, 1, 0.0, pytest.device)
     assert mx.allclose(actual, expected).all()
 
 
@@ -66,7 +66,7 @@ def test_pad2d_multi_channel(pytest_configure):
     x = mx.arange(4, dtype=mx.float32).reshape((1, 2, 2, 1))
     expected = mx.array([[[[-1.0, 0.0], [-1.0, 1.0], [-1.0, -1.0]], [[-1.0, 2.0], [-1.0, 3.0], [-1.0, -1.0]]]])
     
-    actual = pad2d(x, 0, 1, 1, 0, -1.0, pytest.device)
+    actual = nn.functional.pad2d(x, 0, 1, 1, 0, -1.0, pytest.device)
     assert mx.allclose(actual, expected).all()
 
 
@@ -86,7 +86,7 @@ def test_conv1d(pytest_configure):
         weights = mx.random.normal(shape=(co.item(), ci.item(), kernel_size.item()))
         weights_torch = torch.from_numpy(np.array(weights))
 
-        my_output = conv1d(
+        my_output = nn.functional.conv1d(
             x,
             weights,
             stride=stride.item(),
@@ -118,7 +118,7 @@ def test_conv2d(pytest_configure):
         weights = mx.random.normal(shape=(co.item(), ci.item(), *kernel_size), dtype=mx.float32)
         weights_torch = torch.from_numpy(np.array(weights))
 
-        my_output = conv2d(
+        my_output = nn.functional.conv2d(
             x,
             weights,
             stride=stride,

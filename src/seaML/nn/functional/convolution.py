@@ -4,6 +4,7 @@ from typeguard import typechecked as typechecker
 
 import mlx.core as mx
 
+from ..base import Parameter
 from seaML.utils import get_strides, _pair_value
 
 
@@ -70,7 +71,7 @@ def pad2d(
 @jaxtyped(typechecker=typechecker)
 def conv1d(
     x: mx.array,
-    weights: mx.array,
+    weights: Union[Parameter, mx.array],
     stride: int = 1,
     padding: int = 0,
     device: Optional[mx.DeviceType] = None
@@ -120,7 +121,7 @@ def conv1d(
 @jaxtyped(typechecker=typechecker)
 def conv2d(
     x: mx.array,
-    weights: mx.array,
+    weights: Union[Parameter, mx.array],
     stride: Union[int, tuple[int, int]] = 1,
     padding: Union[int, tuple[int, int]] = 0,
     device: Optional[mx.DeviceType] = None

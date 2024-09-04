@@ -3,7 +3,8 @@ from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
 import mlx.core as mx
-from mlx.nn import Module
+
+from ..nn.base import Module
 
 
 @jaxtyped(typechecker=typechecker)

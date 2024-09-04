@@ -3,10 +3,22 @@ from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
 from collections import namedtuple
+from functools import reduce
 import random
 import numpy as np
 import torch
 import mlx.core as mx
+
+from ..nn.base import Tensor, Operation
+
+from graphviz import Digraph
+
+
+@jaxtyped(typechecker=typechecker)
+def prod(
+    array: Union[tuple, list]
+): 
+    return reduce((lambda x, y: x * y), array)
 
 
 @jaxtyped(typechecker=typechecker)
@@ -202,4 +214,69 @@ class DataLoader:
         for batch_idx in range(0, self.dataset_size, self.batch_size):
             yield (mx.stack(self.X[batch_idx:(batch_idx + self.batch_size)], axis=0, stream=self.device),
                    mx.stack(self.y[batch_idx:(batch_idx + self.batch_size)], axis=0, stream=self.device))
+
+
+def trace_graph(
+        root: Tensor
+) -> tuple[set, set]:
+    """
+    Trace computational graph
+    """
+    # nodes = Operator or Tensor
+    # edges = dataflow
+    nodes, dataflow = set(), set()
+
+    def _build_graph(tensor: Tensor):
+        if tensor not in nodes:
+            nodes.add(tensor)
+
+            operation = tensor.node
+
+            if operation is not None:
+                nodes.add(operation)
+
+                # dataflow: Operation -> output Tensor
+                dataflow.add((operation, tensor))
+
+                # add a connection between Operation
+                # and its input Tensors
+                for input_tensor in operation.inputs:
+                    # dataflow: input Tensor -> Operation
+                    # conditional check for in-place operation
+                    if ((input_tensor, operation) not in dataflow and
+                        (operation, input_tensor) not in dataflow):
+                        dataflow.add((input_tensor, operation))
+
+                    _build_graph(input_tensor)
+
+    _build_graph(root)
+
+    return nodes, dataflow
+
+
+def visualize_graph(
+        root,
+        format: str = 'svg',
+        direction: str = 'TB'
+):
+    """
+    Visualize computational graph
+
+    Inputs:
+        format: format to store the graph: 'svg', 'png'
+        direction: direction for building the graph: ['TB', 'LR']
+    """
+    assert direction in ['TB', 'LR'], "direction has to be either 'TB' or 'LR'"
+
+    nodes, dataflow = trace_graph(root)
+
+    graph = Digraph(format=format, graph_attr={'rankdir': direction})
+
+    for node in nodes:
+        graph.node(name=str(id(node)), label=str(node), shape='record')
+
+    for n1, n2 in dataflow:
+        graph.edge(str(id(n1)), str(id(n2)))
+
+    return graph
 

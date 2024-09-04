@@ -4,25 +4,18 @@ from typeguard import typechecked as typechecker
 
 import mlx.core as mx
 
+from ...nn.base import Tensor
+
 
 @jaxtyped(typechecker=typechecker)
 def relu(
-        x: mx.array,
-        inplace: bool,
+        x: Tensor,
         device: Optional[mx.DeviceType] = None
-) -> mx.array:
+) -> Tensor:
     """
     Like torch.nn.functional.relu
     """
-    if inplace:
-        # mlx does not yet support boolean indices
-        indices = [i for i, e in enumerate(x < 0.0) if e]
+    # return mx.maximum(x, 0.0, stream=device)
 
-        x[indices] = 0.0
-        return x
-
-    else:
-        device = mx.gpu if not device else device
-
-        return mx.maximum(x, 0.0, stream=device)
+    return x.maximum(0.0)
 

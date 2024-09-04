@@ -4,7 +4,7 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
-from seaML.nn import Conv1d, Conv2d
+import seaML.nn as nn
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def pytest_configure():
 
 
 def test_nn_conv1d(pytest_configure):
-    m = Conv1d(4, 5, 3)
+    m = nn.Conv1d(4, 5, 3)
     assert m.weight.size == 4 * 5 * 3
 
     for _ in range(pytest.n_tests):
@@ -32,7 +32,7 @@ def test_nn_conv1d(pytest_configure):
         x = mx.random.normal(shape=(b.item(), ci.item(), l.item()))
         x_torch = torch.from_numpy(np.array(x))
 
-        my_conv = Conv1d(
+        my_conv = nn.Conv1d(
             in_channels=ci.item(),
             out_channels=co.item(),
             kernel_size=kernel_size,
@@ -59,7 +59,7 @@ def test_nn_conv1d(pytest_configure):
 
 
 def test_nn_conv2d(pytest_configure):
-    m = Conv2d(4, 5, 3)
+    m = nn.Conv2d(4, 5, 3)
     assert m.weight.size == 4 * 5 * 3 * 3
 
     for _ in range(pytest.n_tests):
@@ -82,7 +82,7 @@ def test_nn_conv2d(pytest_configure):
         x = mx.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
         x_torch = torch.from_numpy(np.array(x))
 
-        my_conv = Conv2d(
+        my_conv = nn.Conv2d(
             in_channels=ci.item(),
             out_channels=co.item(),
             kernel_size=kernel_size,

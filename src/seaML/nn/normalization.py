@@ -4,7 +4,8 @@ from typeguard import typechecked as typechecker
 
 from einops.array_api import rearrange
 import mlx.core as mx
-from mlx.nn import Module
+
+from .base import Module, Parameter
 
 
 @jaxtyped(typechecker=typechecker)
@@ -28,16 +29,13 @@ class BatchNorm2d(Module):
         self.momentum = momentum
         
         # gamma and beta
-        self.weight = mx.ones(shape=(num_features,))
-        self.bias = mx.zeros(shape=(num_features,))
+        self.weight = Parameter(mx.ones(shape=(num_features,)))
+        self.bias = Parameter(mx.zeros(shape=(num_features,)))
 
         # buffers
-        self.running_mean = mx.zeros(shape=(num_features,))
-        self.running_var = mx.ones(shape=(num_features,))
-        self.num_batches_tracked = mx.zeros(shape=(1,))
-
-        # freeze buffers since they are not required for gradient computation
-        self.freeze(keys=['running_mean', 'running_var', 'num_batches_tracked'])
+        self.register_buffer('running_mean', mx.zeros(shape=(num_features,)))
+        self.register_buffer('running_var', mx.ones(shape=(num_features,)))
+        self.register_buffer('num_batches_tracked', mx.zeros(shape=(1,)))
 
     def __call__(
             self,
@@ -75,6 +73,6 @@ class BatchNorm2d(Module):
 
         return out
 
-    def _extra_repr(self) -> str:
-        return super()._extra_repr()
+    def extra_repr(self) -> str:
+        return super().extra_repr()
 

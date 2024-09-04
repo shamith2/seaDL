@@ -4,10 +4,10 @@ from typeguard import typechecked as typechecker
 
 import math
 import mlx.core as mx
-from mlx.nn import Module
 
-from seaML.utils import _pair_value
-from seaML.nn.functional import conv1d, conv2d
+from .base import Module, Parameter
+from .functional import conv1d, conv2d
+from ..utils import _pair_value
 
 
 @jaxtyped(typechecker=typechecker)
@@ -36,19 +36,27 @@ class Conv1d(Module):
         k = 1.0 / (in_channels * kernel_size)
         scale = -math.sqrt(k)
         
-        self.weight = mx.random.uniform(
-            low=-scale,
-            high=scale,
-            shape=(out_channels, in_channels, kernel_size),
-            dtype=dtype
+        self.weight = Parameter(
+                mx.random.uniform(
+                low=-scale,
+                high=scale,
+                shape=(out_channels, in_channels, kernel_size),
+                dtype=dtype
+            )
         )
 
-        self.bias = mx.random.uniform(
-            low=-scale,
-            high=scale,
-            shape=(out_channels,),
-            dtype=dtype
-        ) if bias else None
+        if bias:
+            self.bias = Parameter(
+                    mx.random.uniform(
+                    low=-scale,
+                    high=scale,
+                    shape=(out_channels,),
+                    dtype=dtype
+                )
+            )
+
+        else:
+            self.bias = None
 
     def __call__(
             self,
@@ -64,7 +72,7 @@ class Conv1d(Module):
         )
 
         if self.bias is not None:
-            out += mx.expand_dims(self.bias, axis=(0, 2), stream=self.device)
+            out += self.bias.expand_dims(dim=(0, 2), device=self.device)
 
         return out
 
@@ -103,19 +111,27 @@ class Conv2d(Module):
         k = 1.0 / (in_channels * self.kh * self.kw)
         scale = -math.sqrt(k)
         
-        self.weight = mx.random.uniform(
-            low=-scale,
-            high=scale,
-            shape=(out_channels, in_channels, self.kh, self.kw),
-            dtype=dtype
+        self.weight = Parameter(
+                mx.random.uniform(
+                low=-scale,
+                high=scale,
+                shape=(out_channels, in_channels, self.kh, self.kw),
+                dtype=dtype
+            )
         )
 
-        self.bias = mx.random.uniform(
-            low=-scale,
-            high=scale,
-            shape=(out_channels,),
-            dtype=dtype
-        ) if bias else None
+        if bias:
+            self.bias = Parameter(
+                    mx.random.uniform(
+                    low=-scale,
+                    high=scale,
+                    shape=(out_channels,),
+                    dtype=dtype
+                )
+            )
+
+        else:
+            self.bias = None
 
     def __call__(
             self,
@@ -131,7 +147,7 @@ class Conv2d(Module):
         )
 
         if self.bias is not None:
-            out += mx.expand_dims(self.bias, axis=(0, 2, 3), stream=self.device)
+            out += self.bias.expand_dims(dim=(0, 2, 3), device=self.device)
 
         return out
 
