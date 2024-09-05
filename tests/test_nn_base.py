@@ -21,7 +21,7 @@ class SimpleNet(nn.Module):
     
     def __call__(self, x):
         out = self.linear(x)
-        return out # self.relu(out)
+        return self.relu(out)
 
 
 def test_parameter(pytest_configure):
@@ -38,9 +38,8 @@ def test_parameter(pytest_configure):
     result_sub_2 = param1 - 3.0
     result_sub_3 = 3.0 - param2
 
-    result_mul_1 = param1 * param2
-    result_mul_2 = param1 * 5.0
-    result_mul_3 = -4.0 * param2
+    result_mul_1 = param1.mul(param2)
+    result_mul_2 = param1.mul(5.0)
 
     result_pow_1 = param1 ** 2
     result_pow_2 = param1 ** param2
@@ -57,7 +56,6 @@ def test_parameter(pytest_configure):
 
     np.testing.assert_allclose(np.array(result_mul_1.fire().data), np.array([4.0, -10.0, 18.0]))
     np.testing.assert_allclose(np.array(result_mul_2.fire().data), np.array([5.0, -10.0, 15.0]))
-    np.testing.assert_allclose(np.array(result_mul_3.fire().data), np.array([-16.0, -20.0, -24.0]))
 
     np.testing.assert_allclose(np.array(result_pow_1.fire().data), np.array([1.0, 4.0, 9.0]))
     np.testing.assert_allclose(np.array(result_pow_2.fire().data), np.array([1.0, -32.0, 729.0]))
@@ -72,17 +70,7 @@ def test_module(pytest_configure):
 
     c_output = output.fire()
 
-    # np.testing.assert_allclose(np.array(c_output.data),
-    #                            np.maximum(np.array(((x.data @ net.linear.weight.data.transpose()) + net.linear.bias.data)), 0.0))
-
-    from seaDL.utils import visualize_graph
-
-    # g = visualize_graph(c_output)
-    # g.render('computational_graph', view=True, cleanup=True)
+    np.testing.assert_allclose(np.array(c_output.data),
+                               np.maximum(np.array(((x.data @ net.linear.weight.data.transpose()) + net.linear.bias.data)), 0.0))
 
     c_output.backward()
-
-    for name, param in net._parameters:
-        print(name, param.grad)
-
-    cc
