@@ -4,7 +4,6 @@ import numpy as np
 from seaDL import Tensor
 import seaDL.nn as nn
 import seaDL.random as random
-from seaDL.utils import visualize_graph
 
 
 @pytest.fixture
@@ -75,11 +74,4 @@ def test_module(pytest_configure):
 
     np.testing.assert_allclose(np.array(c_output.data),
                                np.maximum(np.array(((x.data @ net.linear.weight.data.transpose()) + net.linear.bias.data)), 0.0))
-
-    c_output.backward()
-
-    for name, param in net._parameters:
-        print(name, param.grad)
-
-    cc
 

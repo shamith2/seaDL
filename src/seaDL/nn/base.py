@@ -20,6 +20,7 @@ class Parameter(Tensor):
 
         super().__init__(
             data=data.data,
+            dtype=data.data_type,
             requires_grad=requires_grad
         )
 
@@ -29,7 +30,7 @@ class Parameter(Tensor):
         Initialize gradient for Parameter to zero
         """
         if self.requires_grad:
-            self.grad = zeros_like(self.detach())
+            self.grad = zeros_like(self.detach()).data
 
 
     def _init_graph(
@@ -49,8 +50,8 @@ class Parameter(Tensor):
 
 
     def __repr__(self):
-        return "Parameter(shape: {}, requires_grad: {})".format(
-            self.data.shape, self.requires_grad
+        return "Parameter(shape: {}, dtype: {}, requires_grad: {})".format(
+            self.data.shape, self.data_type.value_as_str, self.requires_grad
         )
 
 

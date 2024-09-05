@@ -21,6 +21,8 @@ class DataType:
             self,
             dtype: str = 'float32'
     ):
+        self.value_as_str = dtype
+
         if dtype.lower() == 'float32':
             self.value = config.backend.float32
 
@@ -658,7 +660,7 @@ class Tensor:
 
     def __repr__(self):
         return "Tensor(shape: {}, dtype: {}, requires_grad: {})".format(
-            self.data.shape, self.data_type, self.requires_grad
+            self.data.shape, self.data_type.value_as_str, self.requires_grad
         )
 
 
