@@ -162,6 +162,11 @@ class Tensor:
 
 
     @property
+    def itemsize(self):
+        return self.data.itemsize
+
+
+    @property
     def stride(self):
         """
         Like torch.Tensor.stride
@@ -184,10 +189,13 @@ class Tensor:
 
         self.strides = [1] * len(_shape)
         self.strides[:-1] = config.backend.cumprod(
-            config.backend.array(_shape[::-1])
-        )[::-1][1:].tolist()
+                                config.Array(_shape[::-1])
+                            )[::-1][1:]
 
-        return self.strides
+        if config.backend_library == 'numpy':
+            self.strides = self.strides * self.itemsize
+
+        return self.strides.tolist()
 
 
     def astype(
@@ -554,7 +562,7 @@ class Tensor:
     ):
         node = Operation(
             name='reshape',
-            operation=lambda x: config.backend.as_strided(x, shape, strides),
+            operation=lambda x: config.strided_lib.as_strided(x, shape, strides),
             inputs=(self,),
             grad_fn=lambda gradient: gradient
         )
@@ -807,10 +815,10 @@ class Operation:
 # functions
 @jaxtyped(typechecker=typechecker)
 def zeros_like(
-        tensor: Union[Tensor, config.Array],
+        tensor: Union[Tensor, ArrayType],
         dtype: Optional[DataType] = DataType('float32')
 ):
-    if isinstance(tensor, config.Array):
+    if isinstance(tensor, ArrayType):
         return Tensor(
             data=config.backend.zeros_like(tensor),
             dtype=dtype
@@ -826,10 +834,10 @@ def zeros_like(
 
 @jaxtyped(typechecker=typechecker)
 def ones_like(
-        tensor: Union[Tensor, config.Array],
+        tensor: Union[Tensor, ArrayType],
         dtype: Optional[DataType] = DataType('float32')
 ):
-    if isinstance(tensor, config.Array):
+    if isinstance(tensor, ArrayType):
         return Tensor(
             data=config.backend.ones_like(tensor),
             dtype=dtype

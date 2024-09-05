@@ -15,11 +15,21 @@ def uniform(
         high: float = 1.0,
         dtype: Optional[DataType] = DataType('float32')
 ):
-    data = config.backend.random.uniform(
-                low=low,
-                high=high,
-                shape=shape
-            )
+    if config.backend_library == 'mlx':
+        data = config.backend.random.uniform(
+                    low=low,
+                    high=high,
+                    shape=shape
+                )
+
+    elif config.backend_library == 'numpy':
+        rng = config.backend.random.default_rng()
+
+        data = rng.uniform(
+                    low=low,
+                    high=high,
+                    size=shape
+                )
 
     return Tensor(
         data=data,
@@ -34,11 +44,21 @@ def normal(
         scale: float = 1.0,
         dtype: Optional[DataType] = DataType('float32')
 ):
-    data=config.backend.random.normal(
-            shape=shape,
-            loc=mean,
-            scale=scale
-        )
+    if config.backend_library == 'mlx':
+        data=config.backend.random.normal(
+                shape=shape,
+                loc=mean,
+                scale=scale
+            )
+
+    elif config.backend_library == 'numpy':
+        rng = config.backend.random.default_rng()
+
+        data=rng.normal(
+                loc=mean,
+                scale=scale,
+                size=shape
+            )
 
     return Tensor(
         data=data,

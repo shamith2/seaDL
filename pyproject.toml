@@ -10,8 +10,8 @@ dynamic = ["version"]
 authors = [
     {name = "Shamith Achanta", email = "achantashamith007@gmail.com"},
 ]
-description = "Interpretable DL: simplified library, based on MLX, for getting insights into neural networks"
-keywords = ["interpretability", "neural networks", "mlx"]
+description = "Interpretable DL: simplified library, based on NumPy-like libraries, for getting insights into neural networks"
+keywords = ["interpretability", "neural networks", "mlx", "numpy"]
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
