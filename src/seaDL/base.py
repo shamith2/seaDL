@@ -23,10 +23,12 @@ class DataType:
     ):
         self.value_as_str = dtype
 
-        if dtype.lower() == 'float32':
+        # to accomodate for dtype strings
+        # like "mlx.core.float32"
+        if 'float32' in dtype.lower():
             self.value = config.backend.float32
 
-        elif dtype.lower() == 'float16':
+        elif 'float16' in dtype.lower():
             self.value = config.backend.float16
 
         else:
@@ -96,11 +98,11 @@ class Tensor:
 
         Retrieve slices of elements from Tensor
         """
-        def grad_fn(gradient: Tensor):
+        def grad_fn(gradient: ArrayType):
             grad = zeros_like(gradient).data
             grad[indices] = gradient
 
-            return grad
+            return (grad,)
 
 
         node = Operation(
@@ -192,7 +194,7 @@ class Tensor:
                                 config.Array(_shape[::-1])
                             )[::-1][1:]
 
-        if config.backend_library == 'numpy':
+        if config.is_backend_numpy():
             self.strides = self.strides * self.itemsize
 
         return self.strides.tolist()
@@ -232,7 +234,7 @@ class Tensor:
                 name='__add__',
                 operation=lambda x, y: config.backend.add(x, y),
                 inputs=(self, other),
-                grad_fn=lambda gradient: (gradient, gradient)
+                grad_fn=lambda gradient, *inputs: (gradient, gradient)
             )
 
             result = Tensor(
@@ -248,7 +250,7 @@ class Tensor:
                 name='__add__',
                 operation=lambda x: config.backend.add(x, other),
                 inputs=(self,),
-                grad_fn=lambda gradient: gradient
+                grad_fn=lambda gradient, *inputs: (gradient,)
             )
 
             result = Tensor(
@@ -270,7 +272,7 @@ class Tensor:
                 name='__sub__',
                 operation=lambda x, y: config.backend.subtract(x, y),
                 inputs=(self, other),
-                grad_fn=lambda gradient: (gradient, -gradient)
+                grad_fn=lambda gradient, *inputs: (gradient, -gradient)
             )
 
             result = Tensor(
@@ -286,7 +288,7 @@ class Tensor:
                 name='__sub__',
                 operation=lambda x: config.backend.subtract(x, other),
                 inputs=(self,),
-                grad_fn=lambda gradient: gradient
+                grad_fn=lambda gradient, *inputs: (gradient,)
             )
 
             result = Tensor(
@@ -299,17 +301,17 @@ class Tensor:
         return result
 
 
-    def __mul__(
+    def mul(
             self,
             other: Union[int, float, ArrayType, Self]
     ):
         if isinstance(other, Tensor):
             node = Operation(
-                name='__mul__',
+                name='mul',
                 operation=lambda x, y: x * y,
                 inputs=(self, other),
-                grad_fn=lambda gradient: (gradient * other.data,
-                                          gradient, self.data)
+                grad_fn=lambda gradient, *inputs: (gradient * inputs[1],
+                                                   gradient * inputs[0])
             )
 
             result = Tensor(
@@ -321,10 +323,10 @@ class Tensor:
 
         else:
             node = Operation(
-                name='__mul__',
+                name='mul',
                 operation=lambda x : x * other,
                 inputs=(self,),
-                grad_fn=lambda gradient: gradient
+                grad_fn=lambda gradient, *inputs: (gradient,)
             )
 
             result = Tensor(
@@ -343,7 +345,7 @@ class Tensor:
             name='__neg__',
             operation=lambda x : -x,
             inputs=(self,),
-            grad_fn=lambda gradient: gradient
+            grad_fn=lambda gradient, *inputs: (-gradient,)
         )
 
         result = Tensor(
@@ -362,7 +364,7 @@ class Tensor:
             name='__exp__',
             operation=lambda x: config.backend.exp(x),
             inputs=(self,),
-            grad_fn=lambda gradient: gradient * config.backend.exp(self.data)
+            grad_fn=lambda gradient, *inputs: (gradient * config.backend.exp(inputs[0]),)
         )
 
         result = Tensor(
@@ -384,8 +386,8 @@ class Tensor:
                 name='__power__',
                 operation=lambda x, y: config.backend.power(x, y),
                 inputs=(self, other),
-                grad_fn=lambda gradient: (gradient * other * config.backend.power(self.data, other - 1),
-                                          gradient * config.backend.power(self.data, other.data) * config.backend.log(self.data))
+                grad_fn=lambda gradient, *inputs: (gradient * inputs[1] * config.backend.power(inputs[0], inputs[1] - 1),
+                                                   gradient * config.backend.power(inputs[0], inputs[1]) * config.backend.log(inputs[0]))
             )
 
             result = Tensor(
@@ -400,7 +402,7 @@ class Tensor:
                 name='__power__',
                 operation=lambda x: config.backend.power(x, other),
                 inputs=(self,),
-                grad_fn=lambda gradient: gradient * other * config.backend.power(self.data, other - 1)
+                grad_fn=lambda gradient, *inputs: (gradient * inputs[1] * config.backend.power(inputs[0], inputs[1] - 1),)
             )
 
             result = Tensor(
@@ -428,13 +430,6 @@ class Tensor:
         return -self.__sub__(other)
 
 
-    def __rmul__(
-            self,
-            other: Union[int, float, ArrayType, Self]
-    ):
-        return self.__mul__(other)
-
-
     # non-atomic operations
     def matmul(
             self,
@@ -447,8 +442,8 @@ class Tensor:
             name='matmul',
             operation=lambda x, y: config.backend.matmul(x, y),
             inputs=(self, other),
-            grad_fn=lambda gradient: (config.backend.matmul(gradient, config.backend.transpose(other.data)),
-                                      config.backend.matmul(config.backend.transpose(self.data), gradient))
+            grad_fn=lambda gradient, *inputs: (config.backend.matmul(gradient, inputs[1].T),
+                                               config.backend.matmul(inputs[0].T, gradient))
         )
 
         result = Tensor(
@@ -479,11 +474,11 @@ class Tensor:
         out[..., 1:3] = x is equivalent to
         out = out.set_slice((Ellipsis, slice(1, 3)), x)
         """
-        def grad_fn(gradient: Tensor):
+        def grad_fn(gradient, *tensors):
             grad = zeros_like(gradient).data
             grad[indices] = gradient
 
-            return grad
+            return (grad,)
 
         def op(x, y):
             # x[indices] = y.astype(x.dtype)
@@ -518,7 +513,7 @@ class Tensor:
             name='transpose',
             operation=lambda x: config.backend.transpose(x, axes),
             inputs=(self,),
-            grad_fn=lambda gradient: gradient
+            grad_fn=lambda gradient, *inputs: (gradient.T,)
         )
 
         result = Tensor(
@@ -542,7 +537,7 @@ class Tensor:
             name='reshape',
             operation=lambda x: config.backend.reshape(x, shape),
             inputs=(self,),
-            grad_fn=lambda gradient: gradient
+            grad_fn=lambda gradient, *inputs: (gradient,)
         )
 
         result = Tensor(
@@ -564,7 +559,7 @@ class Tensor:
             name='reshape',
             operation=lambda x: config.strided_lib.as_strided(x, shape, strides),
             inputs=(self,),
-            grad_fn=lambda gradient: gradient
+            grad_fn=lambda gradient, *inputs: (gradient,)
         )
 
         result = Tensor(
@@ -586,7 +581,8 @@ class Tensor:
                 name='maximum',
                 operation=lambda x, y: config.backend.maximum(x, y),
                 inputs=(self, other),
-                grad_fn=lambda gradient: (gradient, gradient)
+                grad_fn=lambda gradient, *inputs: (gradient * config.backend.sign(inputs[0]),
+                                                   gradient * config.backend.sign(inputs[0]))
             )
 
             result = Tensor(
@@ -600,7 +596,7 @@ class Tensor:
                 name='maximum',
                 operation=lambda x: config.backend.maximum(x, other),
                 inputs=(self,),
-                grad_fn=lambda gradient: gradient
+                grad_fn=lambda gradient, *inputs: (gradient * config.backend.sign(inputs[0]),)
             )
 
             result = Tensor(
@@ -657,11 +653,11 @@ class Tensor:
         # is initialtized to 1: to start with computing
         # gradient of loss with respect to itself
         if gradient is None:
-            gradient = ones_like(self.detach()).data
+            gradient = ones_like(self.data).data
 
         if self.node is not None:
             # accumulate gradient at the current node: chain rule
-            self.grad = gradient
+            self.grad += gradient
 
             self.node.backward(gradient)
 
@@ -700,8 +696,6 @@ class Operation:
         # inputs to the node
         self.inputs = tuple(inputs)
 
-        self.requires_grad = any(node_input.requires_grad for node_input in inputs)
-
         # function to compute gradient of the node's output
         # with respect to each of the node's inputs
         self.grad_fn = grad_fn
@@ -728,7 +722,7 @@ class Operation:
             # and generate a new Tensor
             self.value = Tensor(
                 data=self.operation(*(tensor.data for tensor in self.inputs)),
-                requires_grad=self.requires_grad
+                requires_grad=any(node_input.requires_grad for node_input in self.inputs)
             )
 
             self.fired = True
@@ -742,29 +736,24 @@ class Operation:
 
     def backward(
             self,
-            gradient: Optional[ArrayType] = None
+            gradient: ArrayType
     ):
         """
         Implement backpropogation: compute gradients for node
         in the computational graph
         """
-        # grad: gradient of a loss with respect to the node's output 
-        # is initialtized to 1: to start with computing
-        # gradient of loss with respect to itself
-        if gradient is not None:
-            gradient = ones_like(gradient).data
-
         # compute gradients with respect to the node inputs
         # and propogate the gradients backward through the graph
         # by recursively calling backward() on the input nodes
         if self.grad_fn is not None:
-            gradients: tuple = self.grad_fn(gradient)
+            gradients: tuple = self.grad_fn(gradient,
+                                            *(input_tensor.data for input_tensor in self.inputs))
 
             for node_input, input_grad in zip(self.inputs, gradients):
                 node_input.backward(input_grad)
 
 
-    def gradient_fn(
+    def numerical_gradient_(
             self,
             h: float = 1e-6
     ):
@@ -815,13 +804,12 @@ class Operation:
 # functions
 @jaxtyped(typechecker=typechecker)
 def zeros_like(
-        tensor: Union[Tensor, ArrayType],
-        dtype: Optional[DataType] = DataType('float32')
+        tensor: Union[Tensor, ArrayType]
 ):
     if isinstance(tensor, ArrayType):
         return Tensor(
             data=config.backend.zeros_like(tensor),
-            dtype=dtype
+            dtype=DataType(str(tensor.dtype))
         )
 
     else:
@@ -834,13 +822,12 @@ def zeros_like(
 
 @jaxtyped(typechecker=typechecker)
 def ones_like(
-        tensor: Union[Tensor, ArrayType],
-        dtype: Optional[DataType] = DataType('float32')
+        tensor: Union[Tensor, ArrayType]
 ):
     if isinstance(tensor, ArrayType):
         return Tensor(
             data=config.backend.ones_like(tensor),
-            dtype=dtype
+            dtype=DataType(str(tensor.dtype))
         )
 
     else:

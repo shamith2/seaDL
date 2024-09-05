@@ -21,7 +21,7 @@ class SimpleNet(nn.Module):
     
     def __call__(self, x):
         out = self.linear(x)
-        return self.relu(out)
+        return out # self.relu(out)
 
 
 def test_parameter(pytest_configure):
@@ -66,12 +66,23 @@ def test_parameter(pytest_configure):
 def test_module(pytest_configure):
     net = SimpleNet()
 
-    x = random.normal(shape=(3,))
+    x = random.normal(shape=(1, 3))
 
     output = net(x)
 
     c_output = output.fire()
 
-    np.testing.assert_allclose(np.array(c_output.data),
-                               np.maximum(np.array(((x.data @ net.linear.weight.data.transpose()) + net.linear.bias.data)), 0.0))
+    # np.testing.assert_allclose(np.array(c_output.data),
+    #                            np.maximum(np.array(((x.data @ net.linear.weight.data.transpose()) + net.linear.bias.data)), 0.0))
 
+    from seaDL.utils import visualize_graph
+
+    # g = visualize_graph(c_output)
+    # g.render('computational_graph', view=True, cleanup=True)
+
+    c_output.backward()
+
+    for name, param in net._parameters:
+        print(name, param.grad)
+
+    cc

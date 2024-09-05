@@ -33,22 +33,6 @@ class Parameter(Tensor):
             self.grad = zeros_like(self.detach()).data
 
 
-    def _init_graph(
-            self,
-            inputs,
-            operation
-    ):
-        """
-        Initialize node in computational graph
-        """
-        self.inputs = inputs
-
-        self.operation = operation
-
-        # return the current Parameter instance
-        return self
-
-
     def __repr__(self):
         return "Parameter(shape: {}, dtype: {}, requires_grad: {})".format(
             self.data.shape, self.data_type.value_as_str, self.requires_grad
@@ -96,7 +80,7 @@ class Module:
             value: Union[Self, Tensor]
     ):
         """
-        Implictly add Parameter or Module to the dict of parameters or submodules
+        Implictly add Tensor or Module to the dict of parameters or submodules
         without explictly calling self.add_modules or self.register_paramater
         """
         if isinstance(value, Tensor):

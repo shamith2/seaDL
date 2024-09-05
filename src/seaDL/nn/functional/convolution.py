@@ -4,7 +4,7 @@ from typeguard import typechecked as typechecker
 
 from ...base import Tensor, Device, full
 from ...nn.base import Parameter
-from ...utils import get_strides, _pair_value
+from ...utils import _pair_value
 
 
 @jaxtyped(typechecker=typechecker)

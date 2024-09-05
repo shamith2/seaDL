@@ -70,6 +70,14 @@ class Config:
             return None
 
 
+    def is_backend_mlx(self):
+        return self.backend_library == 'mlx'
+
+
+    def is_backend_numpy(self):
+        return self.backend_library == 'numpy'
+
+
 # global config instance
 config = Config()
 

@@ -15,14 +15,14 @@ def uniform(
         high: float = 1.0,
         dtype: Optional[DataType] = DataType('float32')
 ):
-    if config.backend_library == 'mlx':
+    if config.is_backend_mlx():
         data = config.backend.random.uniform(
                     low=low,
                     high=high,
                     shape=shape
                 )
 
-    elif config.backend_library == 'numpy':
+    elif config.is_backend_numpy():
         rng = config.backend.random.default_rng()
 
         data = rng.uniform(
@@ -44,14 +44,14 @@ def normal(
         scale: float = 1.0,
         dtype: Optional[DataType] = DataType('float32')
 ):
-    if config.backend_library == 'mlx':
+    if config.is_backend_mlx():
         data=config.backend.random.normal(
                 shape=shape,
                 loc=mean,
                 scale=scale
             )
 
-    elif config.backend_library == 'numpy':
+    elif config.is_backend_numpy():
         rng = config.backend.random.default_rng()
 
         data=rng.normal(
