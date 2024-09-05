@@ -4,7 +4,7 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
-import seaML.nn as nn
+import seaDL.nn as nn
 
 
 @pytest.fixture

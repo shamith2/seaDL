@@ -9,11 +9,11 @@ from sklearn.model_selection import train_test_split as sk_train_test_split
 
 import mlx.core as mx
 
-import seaML.nn as nn
-from seaML.nn import Module
-from seaML.optim import SGD
-from seaML.utils import DataLoader as mxDataLoader
-from seaML.utils import train_test_split
+import seaDL.nn as nn
+from seaDL.nn import Module
+from seaDL.optim import SGD
+from seaDL.utils import DataLoader as mxDataLoader
+from seaDL.utils import train_test_split
 
 
 @pytest.fixture

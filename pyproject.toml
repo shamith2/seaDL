@@ -5,12 +5,12 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "seaML"
+name = "seaDL"
 dynamic = ["version"]
 authors = [
     {name = "Shamith Achanta", email = "achantashamith007@gmail.com"},
 ]
-description = "Interpretable ML: simplified library, based on MLX, for getting insights into neural networks"
+description = "Interpretable DL: simplified library, based on MLX, for getting insights into neural networks"
 keywords = ["interpretability", "neural networks", "mlx"]
 readme = "README.md"
 classifiers = [
@@ -29,11 +29,11 @@ dependencies = [
     "numpy",
     "torch",
     "jaxtyping",
-    "typechecker"
+    "typeguard"
 ]
 
 [tool.hatch.version]
-path = "src/seaML/__init__.py"
+path = "src/seaDL/__init__.py"
 
 [project.urls]
 repository = ""

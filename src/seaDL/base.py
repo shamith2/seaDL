@@ -67,7 +67,7 @@ class Tensor:
 
         # gradient with respect to this node
         if requires_grad and self.numel() != 0:
-            self.grad = zeros_like(self.detach())
+            self.grad = zeros_like(self.detach()).data
 
         else:
             self.grad = None
@@ -95,8 +95,8 @@ class Tensor:
         Retrieve slices of elements from Tensor
         """
         def grad_fn(gradient: Tensor):
-            grad = zeros_like(gradient)
-            grad.data[indices] = gradient.data
+            grad = zeros_like(gradient).data
+            grad[indices] = gradient
 
             return grad
 
@@ -470,8 +470,8 @@ class Tensor:
         out = out.set_slice((Ellipsis, slice(1, 3)), x)
         """
         def grad_fn(gradient: Tensor):
-            grad = zeros_like(gradient)
-            grad.data[indices] = gradient.data
+            grad = zeros_like(gradient).data
+            grad[indices] = gradient
 
             return grad
 
@@ -638,7 +638,7 @@ class Tensor:
 
     def backward(
             self,
-            gradient: Union[ArrayType, None] = None
+            gradient: Optional[ArrayType] = None
     ):
         if not self.requires_grad:
             return
@@ -647,7 +647,7 @@ class Tensor:
         # is initialtized to 1: to start with computing
         # gradient of loss with respect to itself
         if gradient is None:
-            gradient = ones_like(self.detach())
+            gradient = ones_like(self.detach()).data
 
         if self.node is not None:
             # accumulate gradient at the current node: chain rule
@@ -732,7 +732,7 @@ class Operation:
 
     def backward(
             self,
-            gradient: Optional[Tensor] = None
+            gradient: Optional[ArrayType] = None
     ):
         """
         Implement backpropogation: compute gradients for node
@@ -742,7 +742,7 @@ class Operation:
         # is initialtized to 1: to start with computing
         # gradient of loss with respect to itself
         if gradient is not None:
-            gradient = ones_like(gradient.detach())
+            gradient = ones_like(gradient).data
 
         # compute gradients with respect to the node inputs
         # and propogate the gradients backward through the graph
@@ -805,24 +805,40 @@ class Operation:
 # functions
 @jaxtyped(typechecker=typechecker)
 def zeros_like(
-        tensor: Tensor
+        tensor: Union[Tensor, config.Array],
+        dtype: Optional[DataType] = DataType('float32')
 ):
-    return Tensor(
-        data=config.backend.zeros_like(tensor.data),
-        dtype=tensor.data_type,
-        requires_grad=tensor.requires_grad
-    )
+    if isinstance(tensor, config.Array):
+        return Tensor(
+            data=config.backend.zeros_like(tensor),
+            dtype=dtype
+        )
+
+    else:
+        return Tensor(
+            data=config.backend.zeros_like(tensor.data),
+            dtype=tensor.data_type,
+            requires_grad=tensor.requires_grad
+        )
 
 
 @jaxtyped(typechecker=typechecker)
 def ones_like(
-        tensor: Tensor
+        tensor: Union[Tensor, config.Array],
+        dtype: Optional[DataType] = DataType('float32')
 ):
-    return Tensor(
-        data=config.backend.ones_like(tensor.data),
-        dtype=tensor.data_type,
-        requires_grad=tensor.requires_grad
-    )
+    if isinstance(tensor, config.Array):
+        return Tensor(
+            data=config.backend.ones_like(tensor),
+            dtype=dtype
+        )
+
+    else:
+        return Tensor(
+            data=config.backend.ones_like(tensor.data),
+            dtype=tensor.data_type,
+            requires_grad=tensor.requires_grad
+        )
 
 
 @jaxtyped(typechecker=typechecker)

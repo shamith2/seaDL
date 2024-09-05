@@ -90,10 +90,10 @@ def conv1d(
     b, ic, w = pad_x.shape
     _, w_ic, kw = weights.shape
 
-    x_dim0, x_dim1, x_dim2 = pad_x.stride
-
     if ic != w_ic:
         raise ValueError("The number of input features in x should be equal to the number of input features in weights")
+
+    x_dim0, x_dim1, x_dim2 = pad_x.stride
 
     x_prime = pad_x.as_strided(
         shape=(b, ic, 1 + (w - kw) // stride, kw),
@@ -136,10 +136,10 @@ def conv2d(
     b, ic, h, w = pad_x.shape
     _, w_ic, kh, kw = weights.shape
 
-    x_dimb, x_dimc, x_dimh, x_dimw = pad_x.stride
-
     if ic != w_ic:
         raise ValueError("The number of input features in x should be equal to the number of input features in weights")
+
+    x_dimb, x_dimc, x_dimh, x_dimw = pad_x.stride
 
     x_prime = pad_x.as_strided(
         shape=(b, ic, (h - kh) // stride[0] + 1, (w - kw) // stride[1] + 1, kh, kw),

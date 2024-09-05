@@ -4,8 +4,8 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
-import seaML
-import seaML.nn as nn
+import seaDL
+import seaDL.nn as nn
 
 
 @pytest.fixture
@@ -14,7 +14,7 @@ def pytest_configure():
 
 
 def test_pad1d(pytest_configure):
-    x = seaML.Tensor(mx.arange(4)).reshape((1, 1, 4))
+    x = seaDL.Tensor(mx.arange(4)).reshape((1, 1, 4))
 
     actual = nn.functional.pad1d(x, 1, 3, -2.0).fire()
     expected = np.array([[[-2.0, 0.0, 1.0, 2.0, 3.0, -2.0, -2.0, -2.0]]])
@@ -28,7 +28,7 @@ def test_pad1d(pytest_configure):
 
 
 def test_pad1d_multi_channel(pytest_configure):
-    x = seaML.Tensor(mx.arange(4)).reshape((1, 2, 2))
+    x = seaDL.Tensor(mx.arange(4)).reshape((1, 2, 2))
 
     actual = nn.functional.pad1d(x, 0, 2, -3.0).fire()
     expected = np.array([[[0.0, 1.0, -3.0, -3.0], [2.0, 3.0, -3.0, -3.0]]])
@@ -37,7 +37,7 @@ def test_pad1d_multi_channel(pytest_configure):
 
 
 def test_pad2d(pytest_configure):
-    x = seaML.Tensor(mx.arange(4)).reshape((1, 1, 2, 2))
+    x = seaDL.Tensor(mx.arange(4)).reshape((1, 1, 2, 2))
 
     actual = nn.functional.pad2d(x, 2, 3, 0, 1, 0.0).fire()
 
@@ -59,7 +59,7 @@ def test_pad2d_multi_channel(pytest_configure):
     '''
     Should work with two channels of 2x1
     '''
-    x = seaML.Tensor(mx.arange(4)).reshape((1, 2, 2, 1))
+    x = seaDL.Tensor(mx.arange(4)).reshape((1, 2, 2, 1))
 
     actual = nn.functional.pad2d(x, 0, 1, 1, 0, -1.0).fire()
     expected = np.array([[[[-1.0, 0.0], [-1.0, 1.0], [-1.0, -1.0]], [[-1.0, 2.0], [-1.0, 3.0], [-1.0, -1.0]]]])
@@ -77,10 +77,10 @@ def test_conv1d(pytest_configure):
         padding = mx.random.randint(0, 5)
         kernel_size = mx.random.randint(1, 10)
 
-        x = seaML.random.normal(shape=(b.item(), ci.item(), h.item()))
+        x = seaDL.random.normal(shape=(b.item(), ci.item(), h.item()))
         x_torch = torch.from_numpy(np.array(x.data))
 
-        weights = seaML.random.normal(shape=(co.item(), ci.item(), kernel_size.item()))
+        weights = seaDL.random.normal(shape=(co.item(), ci.item(), kernel_size.item()))
         weights_torch = torch.from_numpy(np.array(weights.data))
 
         my_output = nn.functional.conv1d(
@@ -108,10 +108,10 @@ def test_conv2d(pytest_configure):
         padding = tuple(mx.random.randint(0, 5, shape=(2,)).tolist())
         kernel_size = tuple(mx.random.randint(1, 10, shape=(2,)).tolist())
         
-        x = seaML.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
+        x = seaDL.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
         x_torch = torch.from_numpy(np.array(x.data))
 
-        weights = seaML.random.normal(shape=(co.item(), ci.item(), *kernel_size))
+        weights = seaDL.random.normal(shape=(co.item(), ci.item(), *kernel_size))
         weights_torch = torch.from_numpy(np.array(weights.data))
 
         my_output = nn.functional.conv2d(

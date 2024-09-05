@@ -3,8 +3,9 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
-import seaML.nn as nn
-from seaML import Tensor
+import seaDL
+from seaDL import Tensor
+import seaDL.nn as nn
 
 
 @pytest.fixture
@@ -13,7 +14,7 @@ def pytest_configure():
 
 
 def test_nn_flatten(pytest_configure):
-    x = Tensor(mx.arange(24, dtype=mx.float32)).reshape((2, 3, 4))
+    x = Tensor(mx.arange(24)).reshape((2, 3, 4))
 
     assert nn.Flatten(start_dim=0)(x).fire().shape == (24,)
     assert nn.Flatten(start_dim=1)(x).fire().shape == (2, 12)
@@ -22,15 +23,14 @@ def test_nn_flatten(pytest_configure):
 
 
 def test_nn_linear(pytest_configure):
-    x = mx.random.normal(shape=(2, 10, 512))
-    x_torch = torch.from_numpy(np.array(x))
+    x = seaDL.random.normal(shape=(2, 10, 512))
+    x_torch = torch.from_numpy(np.array(x.data))
 
-    linear = nn.Linear(512, 64, bias=True, device=pytest.device)
+    linear = nn.Linear(512, 64, bias=True)
     torch_linear = torch.nn.Linear(512, 64, bias=True)
 
     einsum_linear = nn.Linear(512, 64, bias=True,
-                              subscripts="bci, oi -> bco",
-                              device=pytest.device)
+                              subscripts="bci, oi -> bco")
 
     params = linear._parameters
 
@@ -45,11 +45,11 @@ def test_nn_linear(pytest_configure):
     einsum_linear.weight = Tensor(np.array(torch_linear.weight.detach().clone()))
     einsum_linear.bias = Tensor(np.array(torch_linear.bias.detach().clone()))
 
-    actual = linear(Tensor(x)).fire()
-    actual_torch = torch.from_numpy(np.array(actual))
+    actual = linear(x).fire()
+    actual_torch = torch.from_numpy(np.array(actual.data))
 
-    actual_einsum = einsum_linear(Tensor(x)).fire()
-    actual_einsum_torch = torch.from_numpy(np.array(actual_einsum))
+    actual_einsum = einsum_linear(x).fire()
+    actual_einsum_torch = torch.from_numpy(np.array(actual_einsum.data))
 
     expected = torch_linear(x_torch)
 
@@ -58,10 +58,10 @@ def test_nn_linear(pytest_configure):
 
 
 def test_nn_linear_no_bias(pytest_configure):
-    x = mx.random.normal(shape=(10, 512))
-    x_torch = torch.from_numpy(np.array(x))
+    x = seaDL.random.normal(shape=(10, 512))
+    x_torch = torch.from_numpy(np.array(x.data))
 
-    linear = nn.Linear(512, 64, bias=False, device=pytest.device)
+    linear = nn.Linear(512, 64, bias=False)
     torch_linear = torch.nn.Linear(512, 64, bias=False)
 
     params = linear._parameters
@@ -72,8 +72,8 @@ def test_nn_linear_no_bias(pytest_configure):
 
     linear.weight = Tensor(np.array(torch_linear.weight.detach().clone()))
 
-    actual = linear(Tensor(x)).fire()
-    actual_torch = torch.from_numpy(np.array(actual))
+    actual = linear(x).fire()
+    actual_torch = torch.from_numpy(np.array(actual.data))
 
     expected = torch_linear(x_torch)
 

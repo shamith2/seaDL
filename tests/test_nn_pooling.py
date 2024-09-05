@@ -4,7 +4,7 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
-from seaML.nn import MaxPool2d, AveragePool2d
+from seaDL.nn import MaxPool2d, AveragePool2d
 
 
 @pytest.fixture
