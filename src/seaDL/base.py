@@ -187,7 +187,7 @@ class Tensor:
 
         _shape = self.data.shape
 
-        self.strides = [1] * len(_shape)
+        self.strides = config.Array([1] * len(_shape))
         self.strides[:-1] = config.backend.cumprod(
                                 config.Array(_shape[::-1])
                             )[::-1][1:]
