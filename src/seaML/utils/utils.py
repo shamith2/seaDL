@@ -24,7 +24,7 @@ def prod(
 @jaxtyped(typechecker=typechecker)
 def get_strides(
         shape: tuple,
-        device: mx.DeviceType
+        device: Optional[mx.DeviceType] = None
 ):
     """
     Like torch.Tensor.stride

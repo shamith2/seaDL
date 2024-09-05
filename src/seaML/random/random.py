@@ -15,26 +15,16 @@ def uniform(
         high: float = 1.0,
         dtype: Optional[DataType] = DataType('float32')
 ):
-    if config.backend_library == 'mlx':
-        data = config.backend.random.uniform(
-                    low=low,
-                    high=high,
-                    shape=shape
-                )
-
-    else:
-        rng = config.backend.random.default_rng()
-
-        data=rng.uniform(
-            low=low,
-            high=high,
-            size=shape
-        )
+    data = config.backend.random.uniform(
+                low=low,
+                high=high,
+                shape=shape
+            )
 
     return Tensor(
         data=data,
-        requires_grad=False
-    ).astype(dtype)
+        dtype=dtype
+    )
 
 
 @jaxtyped(typechecker=typechecker)
@@ -44,24 +34,14 @@ def normal(
         scale: float = 1.0,
         dtype: Optional[DataType] = DataType('float32')
 ):
-    if config.backend_library == 'mlx':
-        data=config.backend.random.normal(
-                shape=shape,
-                loc=mean,
-                scale=scale
-            )
-
-    else:
-        rng = config.backend.random.default_rng()
-
-        data=rng.normal(
+    data=config.backend.random.normal(
+            shape=shape,
             loc=mean,
-            scale=scale,
-            size=shape
+            scale=scale
         )
 
     return Tensor(
         data=data,
-        requires_grad=False
-    ).astype(dtype)
+        dtype=dtype
+    )
 

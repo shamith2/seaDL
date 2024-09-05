@@ -5,6 +5,7 @@ import mlx.core as mx
 import pytest
 
 import seaML.nn as nn
+from seaML import Tensor
 
 
 @pytest.fixture
@@ -19,8 +20,8 @@ def test_nn_relu(pytest_configure: None):
 
     relu = nn.ReLU()
 
-    actual = relu(nn.Tensor(x)).fire()
-    actual_torch = torch.from_numpy(np.array(actual))
+    actual = relu(Tensor(x)).fire()
+    actual_torch = torch.from_numpy(np.array(actual.data))
 
     expected = F.relu(x_torch)
 

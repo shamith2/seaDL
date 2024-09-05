@@ -4,6 +4,7 @@ import mlx.core as mx
 import pytest
 
 import seaML.nn as nn
+from seaML import Tensor
 
 
 @pytest.fixture
@@ -12,7 +13,7 @@ def pytest_configure():
 
 
 def test_nn_flatten(pytest_configure):
-    x = nn.Tensor(mx.arange(24, dtype=mx.float32)).reshape((2, 3, 4))
+    x = Tensor(mx.arange(24, dtype=mx.float32)).reshape((2, 3, 4))
 
     assert nn.Flatten(start_dim=0)(x).fire().shape == (24,)
     assert nn.Flatten(start_dim=1)(x).fire().shape == (2, 12)
@@ -27,7 +28,9 @@ def test_nn_linear(pytest_configure):
     linear = nn.Linear(512, 64, bias=True, device=pytest.device)
     torch_linear = torch.nn.Linear(512, 64, bias=True)
 
-    einsum_linear = nn.Linear(512, 64, bias=True, einsum_skipdims=2, device=pytest.device)
+    einsum_linear = nn.Linear(512, 64, bias=True,
+                              subscripts="bci, oi -> bco",
+                              device=pytest.device)
 
     params = linear._parameters
 
@@ -36,16 +39,16 @@ def test_nn_linear(pytest_configure):
     assert linear.weight.shape == (64, 512)
     assert linear.bias.shape == (64,)
 
-    linear.weight = nn.Tensor(np.array(torch_linear.weight.detach().clone()))
-    linear.bias = nn.Tensor(np.array(torch_linear.bias.detach().clone()))
+    linear.weight = Tensor(np.array(torch_linear.weight.detach().clone()))
+    linear.bias = Tensor(np.array(torch_linear.bias.detach().clone()))
 
-    einsum_linear.weight = nn.Tensor(np.array(torch_linear.weight.detach().clone()))
-    einsum_linear.bias = nn.Tensor(np.array(torch_linear.bias.detach().clone()))
+    einsum_linear.weight = Tensor(np.array(torch_linear.weight.detach().clone()))
+    einsum_linear.bias = Tensor(np.array(torch_linear.bias.detach().clone()))
 
-    actual = linear(nn.Tensor(x)).fire()
+    actual = linear(Tensor(x)).fire()
     actual_torch = torch.from_numpy(np.array(actual))
 
-    actual_einsum = einsum_linear(nn.Tensor(x)).fire()
+    actual_einsum = einsum_linear(Tensor(x)).fire()
     actual_einsum_torch = torch.from_numpy(np.array(actual_einsum))
 
     expected = torch_linear(x_torch)
@@ -67,9 +70,9 @@ def test_nn_linear_no_bias(pytest_configure):
 
     assert linear.bias is None, "Bias should be None when not enabled"
 
-    linear.weight = nn.Tensor(np.array(torch_linear.weight.detach().clone()))
+    linear.weight = Tensor(np.array(torch_linear.weight.detach().clone()))
 
-    actual = linear(nn.Tensor(x)).fire()
+    actual = linear(Tensor(x)).fire()
     actual_torch = torch.from_numpy(np.array(actual))
 
     expected = torch_linear(x_torch)

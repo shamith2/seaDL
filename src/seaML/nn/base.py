@@ -92,17 +92,18 @@ class Module:
     def __setattr__(
             self,
             name: str,
-            value: Union[Self, Parameter]
+            value: Union[Self, Tensor]
     ):
         """
         Implictly add Parameter or Module to the dict of parameters or submodules
         without explictly calling self.add_modules or self.register_paramater
         """
-        if isinstance(value, Parameter):
+        if isinstance(value, Tensor):
             self._parameters[name] = value
 
-            if value.requires_grad:
-                self._trainable_parameters[name] = value
+            value.requires_grad = True
+
+            self._trainable_parameters[name] = value
 
         elif isinstance(value, Module):
             self._modules[name] = value
@@ -140,28 +141,32 @@ class Module:
     def register_paramater(
             self,
             name: str,
-            parameter: Parameter
+            value: Tensor
     ):
         """
         Register parameters for Module
         """
-        self._parameters[name] = parameter
+        self._parameters[name] = value
 
-        if parameter.requires_grad:
-            self._trainable_parameters[name] = parameter
+        value.requires_grad = True
 
-        setattr(self, name, parameter)
+        self._trainable_parameters[name] = value
+
+        setattr(self, name, value)
 
 
     def register_buffer(
             self,
             name: str,
-            value: ArrayType
+            value: Tensor
     ):
         """
         Register buffers for Module
         """
         self._buffers[name] = value
+
+        if value.requires_grad:
+            value.requires_grad = False
 
         if name in self._parameters.keys():
             del self._parameters[name]

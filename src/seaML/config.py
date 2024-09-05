@@ -13,19 +13,14 @@ class Config:
             self,
             backend_library: str
     ):
-        if backend_library not in ['mlx', 'numpy']:
-            raise ValueError("Currently supported backends: mlx, numpy")
+        if backend_library not in ['mlx']:
+            raise ValueError("Currently supported backends: mlx")
 
         # import backend based on backend_library
         if backend_library == 'mlx':
             import mlx.core as backend
             from mlx.core import array as Array
             from mlx.core import array as ArrayType
-
-        else:
-            import numpy as backend
-            from numpy import array as Array
-            from numpy import ndarray as ArrayType
 
         # assign backend modules as config attributes
         self.backend_library = backend_library
@@ -41,10 +36,6 @@ class Config:
         if self.backend == 'mlx':
             if device_type not in ['cpu', 'gpu']:
                 raise ValueError("{} only supported backends: cpu, gpu".format(self.backend))
-
-        else:
-            if device_type not in ['cpu']:
-                raise ValueError("{} only supported backends: cpu".format(self.backend))
 
         self.device_type = device_type
 
