@@ -4,6 +4,7 @@ import numpy as np
 from seaDL import Tensor
 import seaDL.nn as nn
 import seaDL.random as random
+from seaDL.utils import reset_graph, gradient_check, visualize_graph
 
 
 @pytest.fixture
@@ -17,11 +18,17 @@ class SimpleNet(nn.Module):
         super().__init__()
 
         self.linear = nn.Linear(3, 2)
+
+        self.linear.weight = nn.Parameter(Tensor([[0.1, 0.2, -0.9], [-1.4, 0.5, 0.7]]))
+        self.linear.bias = nn.Parameter(Tensor([-1.0, 2.0]))
+
         self.relu = nn.ReLU()
     
     def __call__(self, x):
-        out = self.linear(x)
-        return self.relu(out)
+        out = self.linear(x)#, subscripts="i,oi->o")
+        y = self.relu(out)
+
+        return y
 
 
 def test_parameter(pytest_configure):
@@ -32,11 +39,9 @@ def test_parameter(pytest_configure):
 
     result_add_1 = param1 + param2
     result_add_2 = param1 + 2.0
-    result_add_3 = 3.0 + param2
 
     result_sub_1 = param1 - param2
     result_sub_2 = param1 - 3.0
-    result_sub_3 = 3.0 - param2
 
     result_mul_1 = param1.mul(param2)
     result_mul_2 = param1.mul(5.0)
@@ -48,11 +53,9 @@ def test_parameter(pytest_configure):
 
     np.testing.assert_allclose(np.array(result_add_1.fire().data), np.array([5.0, 3.0, 9.0]))
     np.testing.assert_allclose(np.array(result_add_2.fire().data), np.array([3.0, 0.0, 5.0]))
-    np.testing.assert_allclose(np.array(result_add_3.fire().data), np.array([7.0, 8.0, 9.0]))
 
     np.testing.assert_allclose(np.array(result_sub_1.fire().data), np.array([-3.0, -7.0, -3.0]))
     np.testing.assert_allclose(np.array(result_sub_2.fire().data), np.array([-2.0, -5.0, 0.0]))
-    np.testing.assert_allclose(np.array(result_sub_3.fire().data), np.array([-1.0, -2.0, -3.0]))
 
     np.testing.assert_allclose(np.array(result_mul_1.fire().data), np.array([4.0, -10.0, 18.0]))
     np.testing.assert_allclose(np.array(result_mul_2.fire().data), np.array([5.0, -10.0, 15.0]))
@@ -64,13 +67,17 @@ def test_parameter(pytest_configure):
 def test_module(pytest_configure):
     net = SimpleNet()
 
-    x = random.normal(shape=(1, 3))
+    x = Tensor([[0.5, 2.5, -3.4]])
 
     output = net(x)
 
     c_output = output.fire()
 
-    np.testing.assert_allclose(np.array(c_output.data),
-                               np.maximum(np.array(((x.data @ net.linear.weight.data.transpose()) + net.linear.bias.data)), 0.0))
-
     c_output.backward()
+
+    np.testing.assert_allclose(np.array(c_output.data),
+                               np.maximum(np.array(((x.data @ net.linear.weight.data.transpose()) + net.linear.bias.data)), 0))
+
+    assert gradient_check(c_output, net.linear.weight, h=1e-6, error_tolerance=0.03)
+    assert gradient_check(c_output, net.linear.bias, h=1e-6, error_tolerance=0.03)
+

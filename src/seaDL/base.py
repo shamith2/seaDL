@@ -1,6 +1,7 @@
 from typing import Any, Union, Optional, Self
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
+
 import copy
 
 from .config import config, ArrayType
@@ -42,7 +43,7 @@ class Tensor:
 
     Each node is a Tensor in the computational graph
 
-    Incorporates lazy computation and backpropagation
+    Incorporates lazy computation and automatic differentiation
     """
     def __init__(
             self,
@@ -62,7 +63,7 @@ class Tensor:
         # dtype of Tensor
         self.data_type = dtype
 
-        # node in the computational graph
+        # operation in the computational graph
         # that connects this Tensor
         self.node: Operation = None
 
@@ -70,8 +71,8 @@ class Tensor:
         self.requires_grad = requires_grad
 
         # gradient with respect to this node
-        if requires_grad and self.numel() != 0:
-            self.grad = zeros_like(self.detach()).data
+        if requires_grad:
+            self.grad = zeros_like(self.data).data
 
         else:
             self.grad = None
@@ -86,6 +87,9 @@ class Tensor:
 
 
     def numel(self) -> int:
+        """
+        Number of elements in Tensor
+        """
         return self.data.size
 
 
@@ -181,23 +185,17 @@ class Tensor:
         where each block is 32 elements),
         so function will return (512, 32, 1)
         """
-        if self.numel() == 0:
-            fired_tensor = self.fire()
-
-            # updated the Tensor after computation
-            self.__dict__.update(fired_tensor.__dict__)
-
         _shape = self.data.shape
 
-        self.strides = config.Array([1] * len(_shape))
-        self.strides[:-1] = config.backend.cumprod(
-                                config.Array(_shape[::-1])
-                            )[::-1][1:]
+        strides = config.Array([1] * len(_shape))
+        strides[:-1] = config.backend.cumprod(
+            config.Array(_shape[::-1])
+        )[::-1][1:]
 
         if config.is_backend_numpy():
-            self.strides = self.strides * self.itemsize
+            strides = strides * self.itemsize
 
-        return self.strides.tolist()
+        return strides.tolist()
 
 
     def astype(
@@ -229,6 +227,15 @@ class Tensor:
             self,
             other: Union[int, float, ArrayType, Self]
     ):
+        """
+        Add operation: y = x + other where other is a Tensor or constant
+
+        inputs <- (x, other)
+        gradient <- d (Loss) / d (y)
+
+        d (x + other) / d (x) = 1, d (x + other) / d (other) = 1
+        gradient -> [x + other] -> (gradient * 1, gradient * 1)
+        """
         if isinstance(other, Tensor):
             node = Operation(
                 name='__add__',
@@ -267,6 +274,15 @@ class Tensor:
             self,
             other: Union[int, float, ArrayType, Self]
     ):
+        """
+        Subtract operation: y = x - other where other is a Tensor or constant
+
+        inputs <- (x, other)
+        gradient <- d (Loss) / d (y)
+
+        d (x - other) / d (x) = 1, d (x - other) / d (other) = -1
+        gradient -> [x - other] -> (gradient * 1, gradient * -1)
+        """
         if isinstance(other, Tensor):
             node = Operation(
                 name='__sub__',
@@ -305,6 +321,16 @@ class Tensor:
             self,
             other: Union[int, float, ArrayType, Self]
     ):
+        """
+        Element-wise Multiply operation: y = x * other
+        where other is a Tensor or constant
+
+        inputs <- (x, other)
+        gradient <- d (Loss) / d (y)
+
+        d (x * other) / d (x) = other, d (x * other) / d (other) = x
+        gradient -> [x * other] -> (gradient * other, gradient * x)
+        """
         if isinstance(other, Tensor):
             node = Operation(
                 name='mul',
@@ -315,6 +341,7 @@ class Tensor:
             )
 
             result = Tensor(
+                dtype=self.data_type,
                 requires_grad=(self.requires_grad or other.requires_grad)
             )
 
@@ -326,7 +353,7 @@ class Tensor:
                 name='mul',
                 operation=lambda x : x * other,
                 inputs=(self,),
-                grad_fn=lambda gradient, *inputs: (gradient,)
+                grad_fn=lambda gradient, *inputs: (gradient * inputs[1],)
             )
 
             result = Tensor(
@@ -341,6 +368,15 @@ class Tensor:
 
 
     def __neg__(self):
+        """
+        Negate operation: y = -x
+
+        inputs <- (x,)
+        gradient <- d (Loss) / d (y)
+
+        d (-x) / d (x) = -1
+        gradient -> [-x] -> (gradient * -1,)
+        """
         node = Operation(
             name='__neg__',
             operation=lambda x : -x,
@@ -360,6 +396,15 @@ class Tensor:
 
 
     def __exp__(self):
+        """
+        Element-wise Exponentiation operation: y = e^x
+
+        inputs <- (x,)
+        gradient <- d (Loss) / d (y)
+
+        d (e^x) / d (x) = e^x
+        gradient -> [e^x] -> (gradient * e^x,)
+        """
         node = Operation(
             name='__exp__',
             operation=lambda x: config.backend.exp(x),
@@ -381,6 +426,18 @@ class Tensor:
             self,
             other: Union[int, float, Self, ArrayType]
     ):
+        """
+        Element-wise Power operation: y = x ** y
+        where other is a Tensor or constant
+
+        inputs -> (x, other)
+        gradient <- d (Loss) / d (y)
+
+        d (x ^ other) / d (x) = other * (x ^ (other - 1)),
+        d (x ^ other) / d (other) = (x ^ other ) * ln(x)
+        gradient -> [x ^ other] -> (gradient * other (x ^ (other - 1)),
+                                    gradient * (x ^ other) * ln(x))
+        """
         if isinstance(other, Tensor):
             node = Operation(
                 name='__power__',
@@ -391,6 +448,7 @@ class Tensor:
             )
 
             result = Tensor(
+                dtype=self.data_type,
                 requires_grad=(self.requires_grad or other.requires_grad)
             )
 
@@ -416,18 +474,53 @@ class Tensor:
 
 
     # overload right-hand atomic-like operations
+    def __iadd__(
+            self,
+            other: Union[int, float, ArrayType, Self]
+    ):
+        raise ValueError("Not supported. Use __add__ instead")
+
+
     def __radd__(
             self,
             other: Union[int, float, ArrayType, Self]
     ):
-        return self.__add__(other)
+        raise ValueError("Not supported. Use __add__ instead")
+
+
+    def __isub__(
+            self,
+            other: Union[int, float, ArrayType, Self]
+    ):
+        raise ValueError("Not supported. Use __sub__ instead")
 
 
     def __rsub__(
             self,
             other: Union[int, float, ArrayType, Self]
     ):
-        return -self.__sub__(other)
+        raise ValueError("Not supported. Use __sub__ instead")
+
+
+    def __mul__(
+            self,
+            other: Union[int, float, ArrayType, Self]
+    ):
+        raise ValueError("Not supported. Use .mul() instead")
+
+
+    def __imul__(
+            self,
+            other: Union[int, float, ArrayType, Self]
+    ):
+        raise ValueError("Not supported. Use .mul() instead")
+
+
+    def __rmul__(
+            self,
+            other: Union[int, float, ArrayType, Self]
+    ):
+        raise ValueError("Not supported. Use .mul() instead")
 
 
     # non-atomic operations
@@ -435,6 +528,19 @@ class Tensor:
             self,
             other: Self
     ):
+        """
+        MatMul operation: y = x @ other
+        where other is a Tensor
+
+        inputs <- (x, other)
+        gradient <- d (Loss) / d (y)
+
+        Currently, grad_fn works when x is batched: shape: (3,) => (1, 3)
+
+        d (x @ other) / d (x) = ,
+        d (x @ other) / d (other) = 
+        gradient -> [x @ other] -> (gradient @ other.T, x.T @ gradient)
+        """
         if not isinstance(other, Tensor):
             raise ValueError("MatMul is only supported when other is a Tensor")
 
@@ -447,6 +553,7 @@ class Tensor:
         )
 
         result = Tensor(
+            dtype=self.data_type,
             requires_grad=(self.requires_grad or other.requires_grad)
         )
 
@@ -457,6 +564,11 @@ class Tensor:
 
 
     def sqrt(self):
+        """
+        Element-wise Square Root operation
+
+        Power operation with other = 0.5
+        """
         return self.__pow__(0.5)
 
 
@@ -509,11 +621,20 @@ class Tensor:
             self,
             axes: Optional[tuple] = None
     ):
+        """
+        Transpose operation at the specified axes: y = x.T
+
+        inputs <- (x,)
+        gradient <- d (Loss) / d (y)
+
+        d (x.T) / d (x) = 1.T
+        gradient -> [x.T] -> (gradient.T,)
+        """
         node = Operation(
             name='transpose',
             operation=lambda x: config.backend.transpose(x, axes),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: (gradient.T,)
+            grad_fn=lambda gradient, *inputs: (config.backend.transpose(gradient, axes),)
         )
 
         result = Tensor(
@@ -531,13 +652,20 @@ class Tensor:
             shape: tuple
     ):
         """
-        Return a new Tensor which is the reshape of self
+        Return a new Tensor which is the reshape of self: y = x.reshape(shape)
+        Currently, this operation fires the computational graph
+
+        inputs <- (x,)
+        gradient <- d (Loss) / d (y) <- d (Loss) / d (reshape(x, shape))
+
+        In order to propogate the gradient back to x, gradient needs to be reshaped
+        gradient -> [y] -> (x.reshape(original_shape),)
         """
         node = Operation(
             name='reshape',
             operation=lambda x: config.backend.reshape(x, shape),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: (gradient,)
+            grad_fn=lambda gradient, *inputs: (config.backend.reshape(gradient, self.shape),)
         )
 
         result = Tensor(
@@ -559,7 +687,7 @@ class Tensor:
             name='reshape',
             operation=lambda x: config.strided_lib.as_strided(x, shape, strides),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: (gradient,)
+            grad_fn=lambda gradient, *inputs: (config.strided_lib.as_strided(gradient, self.shape, self.stride),)
         )
 
         result = Tensor(
@@ -576,16 +704,29 @@ class Tensor:
             self,
             other: Union[int, float, Self]
     ):
+        """
+        Maxmimum operation between self and other
+        
+        y = maximum(x, other) => y = x where x >= other else other
+
+        inputs <- (x,)
+        gradient <- d (Loss) / d (y)
+
+        d (y) / d (x) = d (maximum(x - other, 0) / d (x) = sign(maximum(x - other), 0)
+        d (y) / d (other) = d (maximum(x - other, 0) / d (other) = sign(maximum(other - x), 0)
+        gradient -> [x.T] -> (gradient * (d (y) / d (x)), gradient * (d (y) / d (other)))
+        """
         if isinstance(other, Tensor):
             node = Operation(
                 name='maximum',
                 operation=lambda x, y: config.backend.maximum(x, y),
                 inputs=(self, other),
-                grad_fn=lambda gradient, *inputs: (gradient * config.backend.sign(inputs[0]),
-                                                   gradient * config.backend.sign(inputs[0]))
+                grad_fn=lambda gradient, *inputs: (gradient * config.backend.sign(config.backend.maximum(inputs[0] - inputs[1], 0)),
+                                                   gradient * config.backend.sign(config.backend.maximum(inputs[1] - inputs[0], 0)))
             )
 
             result = Tensor(
+                dtype=self.data_type,
                 requires_grad=(self.requires_grad or other.requires_grad)
             )
 
@@ -596,10 +737,11 @@ class Tensor:
                 name='maximum',
                 operation=lambda x: config.backend.maximum(x, other),
                 inputs=(self,),
-                grad_fn=lambda gradient, *inputs: (gradient * config.backend.sign(inputs[0]),)
+                grad_fn=lambda gradient, *inputs: (gradient * config.backend.sign(config.backend.maximum(inputs[0] - other, 0)),)
             )
 
             result = Tensor(
+                dtype=self.data_type,
                 requires_grad=self.requires_grad
             )
 
@@ -613,6 +755,32 @@ class Tensor:
             subscripts: str,
             *tensors: Self
     ):
+        def _reorder_subscripts_for_grad(ordered_subscripts, output_subscript, index):
+            main_tensor_subscript = ordered_subscripts[index]
+            other_tensor_subscripts = tuple(ordered_subscripts[idx] for idx in range(len(ordered_subscripts)) if idx != index)
+
+            # other_tensor_subscripts is empty when einsum operation
+            # is performed only on self with no other tensors
+            if other_tensor_subscripts:
+                return "{},{}->{}".format(output_subscript, ','.join(other_tensor_subscripts), main_tensor_subscript)
+
+            else:
+                return "{}->{}".format(output_subscript, main_tensor_subscript)
+
+        def grad_fn(gradient, *inputs):
+            # subscripts split for each input/tensor, in same order as *tensors
+            input_subscript, output_subscript = subscripts.split('->')
+            ordered_subscripts: tuple = tuple(input_subscript.split(','))
+
+            gradients = ()
+
+            for i in range(len(inputs)):
+                reordered_subscripts = _reorder_subscripts_for_grad(ordered_subscripts, output_subscript, i)
+                gradients += (config.backend.einsum(reordered_subscripts, gradient, *(_input for j, _input in enumerate(inputs) if j != i)),)
+
+            return gradients
+
+
         if not all(isinstance(tensor, Tensor) for tensor in tensors):
             raise ValueError("Einsum is only supported when 'tensors' argument are Tensors")
 
@@ -620,7 +788,7 @@ class Tensor:
             name='einsum',
             operation=lambda *tensors: config.backend.einsum(subscripts, *tensors),
             inputs=(self,) + tensors,
-            grad_fn=None # Not yet Implemented
+            grad_fn=grad_fn
         )
 
         result = Tensor(
@@ -655,11 +823,19 @@ class Tensor:
         if gradient is None:
             gradient = ones_like(self.data).data
 
-        if self.node is not None:
-            # accumulate gradient at the current node: chain rule
-            self.grad += gradient
+        # accumulate gradient at the current node: chain rule
+        self.grad += gradient
 
-            self.node.backward(gradient)
+        _gradient: ArrayType = copy.deepcopy(self.grad)
+
+        if self.node is not None:
+            self.node.backward(_gradient)
+
+
+    def sprint(self):
+        return "Tensor(data: {}, dtype: {}, grad: {}, requires_grad: {})".format(
+            self.data, self.data_type.value_as_str, self.grad, self.requires_grad
+        )
 
 
     def __repr__(self):
@@ -751,48 +927,6 @@ class Operation:
 
             for node_input, input_grad in zip(self.inputs, gradients):
                 node_input.backward(input_grad)
-
-
-    def numerical_gradient_(
-            self,
-            h: float = 1e-6
-    ):
-        """
-        Compute gradient of function fn at point p
-
-        Inputs:
-            fn = function to differentiate. Takes an array as input
-            p: Array = Point to compute the gradient at
-            h: float = Limit h -> 0
-
-            gradient = (fn(p + h) - fn(p)) / h as h -> 0
-
-        Outputs:
-            gradient: Array = Gradient vector at p
-        """
-        for node_input in self.inputs:
-            if isinstance(node_input, Tensor) and node_input.requires_grad:
-                original_value = node_input
-
-                print(original_value, node_input)
-
-                node_input += h
-
-                print(self.inputs)
-                cc
-
-                fn_plus = self.fire()
-
-                node_input -= h
-
-                fn_minus = self.fire()
-
-                print(fn_plus, fn_minus)
-                cc
-
-                node_input = original_value
-
-                node_input.grad = (fn_plus - fn_minus) / (2 * h)
 
 
     def __repr__(self):

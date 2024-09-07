@@ -17,24 +17,13 @@ class Linear(Module):
             in_features: int,
             out_features: int,
             bias: bool = True,
-            subscripts: Optional[str] = '',
             device: Optional[Device] = None,
             dtype: Optional[DataType] = DataType('float32')
     ):
         '''
-        A simple linear (affine) transformation
+        A simple linear (affine) transformation: y = xW.T + b
         '''
         super().__init__()
-
-        # need to get input for einsum notation subscript
-        # since "..." does work with mlx.core.einsum,
-        # atleast not like numpy.einsum
-        if subscripts:
-            self.use_einsum = True
-            self.subscripts = subscripts
-
-        else:
-            self.use_einsum = False
 
         self.in_features = in_features
         self.out_features = out_features
@@ -66,16 +55,19 @@ class Linear(Module):
 
     def __call__(
             self,
-            x: Tensor
+            x: Tensor,
+            subscripts: Optional[str] = ''
     ) -> Tensor:
         '''
         x: shape (*, in_features)
         Return: shape (*, out_features)
         '''
-        # y = xW.T + b
-        if self.use_einsum:
+        # need to get input for einsum notation subscript
+        # since "..." does work with mlx.core.einsum,
+        # atleast not like numpy.einsum
+        if subscripts:
             y = x.einsum(
-                self.subscripts,
+                subscripts,
                 self.weight
             )
 
@@ -122,7 +114,6 @@ class Flatten(Module):
                 (prod(in_shape[self.start_dim:self.end_dim+1]),) +
                 in_shape[self.end_dim+1:])
 
-        # return x.reshape(*shape, stream=self.device)
         return x.reshape(shape)
 
 
