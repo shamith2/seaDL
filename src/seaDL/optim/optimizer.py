@@ -2,9 +2,7 @@ from typing import Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-import mlx.core as mx
-
-from ..base import Device
+from ..base import Device, zeros_like
 from ..nn import Module
 
 
@@ -54,7 +52,7 @@ class SGD:
         cc
 
         # turn params into a list because it might be a generator
-        self.params = list(params.view(stream=self.device))
+        self.params = list(params)
 
         self.lr = lr
         self.mu = momentum
@@ -67,14 +65,16 @@ class SGD:
         self.t = 0
 
         # set gradients for paramters to zero initially
-        self.gs = [mx.zeros_like(p, stream=self.device) for p in self.params]
+        self.gs = [zeros_like(p) for p in self.params]
+
 
     def zero_grad(self) -> None:
         '''
         Zeros all gradients of the parameters in `self.params`
         '''
         for param in self.params:
-            param.grad = mx.zeros_like(param, stream=self.device)
+            param.grad = zeros_like(param).data
+
 
     def step(self) -> None:
         '''
@@ -116,6 +116,7 @@ class SGD:
 
         # update step count
         self.t += 1
+
 
     def __repr__(self) -> str:
         return "SGD(lr={}, momentum={}, weight_decay={})".format(

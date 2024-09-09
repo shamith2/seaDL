@@ -23,7 +23,7 @@ def test_nn_flatten(pytest_configure):
 
 
 def test_nn_linear(pytest_configure):
-    x = seaDL.random.normal(shape=(2, 10, 512))
+    x = seaDL.random.normal(size=(2, 10, 512))
     x_torch = torch.from_numpy(np.array(x.data))
 
     linear = nn.Linear(512, 64, bias=True)
@@ -57,7 +57,7 @@ def test_nn_linear(pytest_configure):
 
 
 def test_nn_linear_no_bias(pytest_configure):
-    x = seaDL.random.normal(shape=(10, 512))
+    x = seaDL.random.normal(size=(10, 512))
     x_torch = torch.from_numpy(np.array(x.data))
 
     linear = nn.Linear(512, 64, bias=False)

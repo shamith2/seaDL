@@ -77,10 +77,10 @@ def test_conv1d(pytest_configure):
         padding = mx.random.randint(0, 5)
         kernel_size = mx.random.randint(1, 10)
 
-        x = seaDL.random.normal(shape=(b.item(), ci.item(), h.item()))
+        x = seaDL.random.normal(size=(b.item(), ci.item(), h.item()))
         x_torch = torch.from_numpy(np.array(x.data))
 
-        weights = seaDL.random.normal(shape=(co.item(), ci.item(), kernel_size.item()))
+        weights = seaDL.random.normal(size=(co.item(), ci.item(), kernel_size.item()))
         weights_torch = torch.from_numpy(np.array(weights.data))
 
         my_output = nn.functional.conv1d(
@@ -108,10 +108,10 @@ def test_conv2d(pytest_configure):
         padding = tuple(mx.random.randint(0, 5, shape=(2,)).tolist())
         kernel_size = tuple(mx.random.randint(1, 10, shape=(2,)).tolist())
         
-        x = seaDL.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
+        x = seaDL.random.normal(size=(b.item(), ci.item(), h.item(), w.item()))
         x_torch = torch.from_numpy(np.array(x.data))
 
-        weights = seaDL.random.normal(shape=(co.item(), ci.item(), *kernel_size))
+        weights = seaDL.random.normal(size=(co.item(), ci.item(), *kernel_size))
         weights_torch = torch.from_numpy(np.array(weights.data))
 
         my_output = nn.functional.conv2d(

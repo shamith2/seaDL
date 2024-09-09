@@ -4,12 +4,13 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
+import seaDL
 import seaDL.nn as nn
 
 
 @pytest.fixture
 def pytest_configure():
-    pytest.device = mx.gpu
+    pytest.device = None
     pytest.n_tests = 10
     pytest.tuples = True
     pytest.use_bias = True
@@ -17,7 +18,7 @@ def pytest_configure():
 
 def test_nn_conv1d(pytest_configure):
     m = nn.Conv1d(4, 5, 3)
-    assert m.weight.size == 4 * 5 * 3
+    assert m.weight.numel() == 4 * 5 * 3
 
     for _ in range(pytest.n_tests):
         b = mx.random.randint(1, 10)
@@ -29,8 +30,8 @@ def test_nn_conv1d(pytest_configure):
         stride = mx.random.randint(1, 5).item()
         padding = mx.random.randint(0, 5).item()
 
-        x = mx.random.normal(shape=(b.item(), ci.item(), l.item()))
-        x_torch = torch.from_numpy(np.array(x))
+        x = seaDL.random.normal(size=(b.item(), ci.item(), l.item()))
+        x_torch = torch.from_numpy(np.array(x.data))
 
         my_conv = nn.Conv1d(
             in_channels=ci.item(),
@@ -38,17 +39,16 @@ def test_nn_conv1d(pytest_configure):
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
-            bias=pytest.use_bias,
-            device=pytest.device
+            bias=pytest.use_bias
         )
 
-        my_output = my_conv(x)
-        my_output_torch = torch.from_numpy(np.array(my_output))
+        my_output = my_conv(x).fire()
+        my_output_torch = torch.from_numpy(np.array(my_output.data))
 
         torch_output = F.conv1d(
             x_torch,
-            torch.from_numpy(np.array(my_conv.weight)),
-            bias=torch.from_numpy(np.array(my_conv.bias)) if pytest.use_bias else None,
+            torch.from_numpy(np.array(my_conv.weight.data)),
+            bias=torch.from_numpy(np.array(my_conv.bias.data)) if pytest.use_bias else None,
             stride=stride,
             padding=padding,
             dilation=1,
@@ -60,7 +60,7 @@ def test_nn_conv1d(pytest_configure):
 
 def test_nn_conv2d(pytest_configure):
     m = nn.Conv2d(4, 5, 3)
-    assert m.weight.size == 4 * 5 * 3 * 3
+    assert m.weight.numel() == 4 * 5 * 3 * 3
 
     for _ in range(pytest.n_tests):
         b = mx.random.randint(1, 10)
@@ -79,8 +79,8 @@ def test_nn_conv2d(pytest_configure):
             stride = mx.random.randint(1, 5).item()
             padding = mx.random.randint(0, 5).item()
 
-        x = mx.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
-        x_torch = torch.from_numpy(np.array(x))
+        x = seaDL.random.normal(size=(b.item(), ci.item(), h.item(), w.item()))
+        x_torch = torch.from_numpy(np.array(x.data))
 
         my_conv = nn.Conv2d(
             in_channels=ci.item(),
@@ -88,17 +88,16 @@ def test_nn_conv2d(pytest_configure):
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
-            bias=pytest.use_bias,
-            device=pytest.device
+            bias=pytest.use_bias
         )
 
-        my_output = my_conv(x)
-        my_output_torch = torch.from_numpy(np.array(my_output))
+        my_output = my_conv(x).fire()
+        my_output_torch = torch.from_numpy(np.array(my_output.data))
 
         torch_output = F.conv2d(
             x_torch,
-            torch.from_numpy(np.array(my_conv.weight)),
-            bias=torch.from_numpy(np.array(my_conv.bias)) if pytest.use_bias else None,
+            torch.from_numpy(np.array(my_conv.weight.data)),
+            bias=torch.from_numpy(np.array(my_conv.bias.data)) if pytest.use_bias else None,
             stride=stride,
             padding=padding,
             dilation=1,

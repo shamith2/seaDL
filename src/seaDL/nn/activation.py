@@ -15,8 +15,6 @@ class ReLU(Module):
     ):
         super().__init__()
 
-        self.device = device
-
 
     def __call__(
             self,

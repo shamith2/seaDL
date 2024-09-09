@@ -32,9 +32,9 @@ class Linear(Module):
 
         self.weight = Parameter(
             uniform(
-                shape=(out_features, in_features),
                 low=-scale,
                 high=scale,
+                size=(out_features, in_features),
                 dtype=dtype
             )
         )
@@ -42,9 +42,9 @@ class Linear(Module):
         if bias:
             self.bias = Parameter(
                 uniform(
-                    shape=(out_features,),
                     low=-scale,
                     high=scale,
+                    size=(out_features,),
                     dtype=dtype
                 )
             )

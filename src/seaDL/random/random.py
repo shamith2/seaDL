@@ -10,17 +10,16 @@ from ..base import Tensor, DataType
 
 # @jaxtyped(typechecker=typechecker)
 def uniform(
-        shape: tuple,
+        size: tuple,
         low: float = 0.0,
         high: float = 1.0,
-        dtype: Optional[DataType] = DataType('float32'),
-        requires_grad: Optional[bool] = False
+        dtype: Optional[DataType] = DataType('float32')
 ):
     if config.is_backend_mlx():
         data = config.backend.random.uniform(
                     low=low,
                     high=high,
-                    shape=shape
+                    shape=size
                 )
 
     elif config.is_backend_numpy():
@@ -29,27 +28,25 @@ def uniform(
         data = rng.uniform(
                     low=low,
                     high=high,
-                    size=shape
+                    size=size
                 )
 
     return Tensor(
         data=data,
-        dtype=dtype,
-        requires_grad=requires_grad
+        dtype=dtype
     )
 
 
 @jaxtyped(typechecker=typechecker)
 def normal(
-        shape: tuple,
+        size: tuple,
         mean: float = 0.0,
         scale: float = 1.0,
-        dtype: Optional[DataType] = DataType('float32'),
-        requires_grad: Optional[bool] = False
+        dtype: Optional[DataType] = DataType('float32')
 ):
     if config.is_backend_mlx():
         data=config.backend.random.normal(
-                shape=shape,
+                shape=size,
                 loc=mean,
                 scale=scale
             )
@@ -60,12 +57,11 @@ def normal(
         data=rng.normal(
                 loc=mean,
                 scale=scale,
-                size=shape
+                size=size
             )
 
     return Tensor(
         data=data,
-        dtype=dtype,
-        requires_grad=requires_grad
+        dtype=dtype
     )
 

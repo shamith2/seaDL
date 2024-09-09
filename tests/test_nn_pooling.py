@@ -34,7 +34,7 @@ def test_nn_maxpool2d(pytest_configure):
             kernel_size = mx.random.randint(1, 10)
             padding = mx.random.randint(0, 1 + kernel_size // 2)
 
-        x = seaDL.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
+        x = seaDL.random.normal(size=(b.item(), ci.item(), h.item(), w.item()))
         x_torch = torch.from_numpy(np.array(x.data))
 
         my_maxpool2d = MaxPool2d(
