@@ -1,10 +1,8 @@
 import pytest
 import numpy as np
 
-import seaDL
-from seaDL import Tensor, config
+from seaDL import Tensor
 import seaDL.nn as nn
-import seaDL.random
 from seaDL.utils import gradient_check
 
 

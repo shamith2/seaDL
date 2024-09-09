@@ -1,10 +1,10 @@
 # Wrapper fucntions for relevant random library functions from backend
 
-from typing import Any, Optional
+from typing import Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ..config import config, ArrayType
+from ..config import config
 from ..base import Tensor, DataType
 
 

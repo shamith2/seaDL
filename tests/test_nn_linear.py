@@ -4,7 +4,6 @@ import mlx.core as mx
 import pytest
 
 import seaDL
-from seaDL import Tensor
 import seaDL.nn as nn
 
 
@@ -14,7 +13,7 @@ def pytest_configure():
 
 
 def test_nn_flatten(pytest_configure):
-    x = Tensor(mx.arange(24)).reshape((2, 3, 4))
+    x = seaDL.Tensor(mx.arange(24)).reshape((2, 3, 4))
 
     assert nn.Flatten(start_dim=0)(x).fire().shape == (24,)
     assert nn.Flatten(start_dim=1)(x).fire().shape == (2, 12)
@@ -38,11 +37,11 @@ def test_nn_linear(pytest_configure):
     assert linear.weight.shape == (64, 512)
     assert linear.bias.shape == (64,)
 
-    linear.weight = Tensor(np.array(torch_linear.weight.detach().clone()))
-    linear.bias = Tensor(np.array(torch_linear.bias.detach().clone()))
+    linear.weight = nn.Parameter(seaDL.Tensor(np.array(torch_linear.weight.detach().clone())))
+    linear.bias = nn.Parameter(seaDL.Tensor(np.array(torch_linear.bias.detach().clone())))
 
-    einsum_linear.weight = Tensor(np.array(torch_linear.weight.detach().clone()))
-    einsum_linear.bias = Tensor(np.array(torch_linear.bias.detach().clone()))
+    einsum_linear.weight = nn.Parameter(seaDL.Tensor(np.array(torch_linear.weight.detach().clone())))
+    einsum_linear.bias = nn.Parameter(seaDL.Tensor(np.array(torch_linear.bias.detach().clone())))
 
     actual = linear(x, subscripts="bci,oi->bco").fire()
     actual_torch = torch.from_numpy(np.array(actual.data))
@@ -69,7 +68,7 @@ def test_nn_linear_no_bias(pytest_configure):
 
     assert linear.bias is None, "Bias should be None when not enabled"
 
-    linear.weight = Tensor(np.array(torch_linear.weight.detach().clone()))
+    linear.weight = nn.Parameter(seaDL.Tensor(np.array(torch_linear.weight.detach().clone())))
 
     actual = linear(x).fire()
     actual_torch = torch.from_numpy(np.array(actual.data))
