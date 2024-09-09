@@ -72,11 +72,7 @@ class Tensor:
         self.requires_grad = requires_grad
 
         # gradient with respect to this node
-        if requires_grad:
-            self.grad = zeros_like(self.data).data
-
-        else:
-            self.grad = None
+        self.zero_grad()
 
 
     def __array__(self):
@@ -687,6 +683,48 @@ class Tensor:
         return result
 
 
+    def squeeze(
+            self,
+            dim: Optional[Union[int, tuple]] = ()
+    ):
+        node = Operation(
+            name='squeeze',
+            operation=lambda x: config.backend.squeeze(x, axis=dim),
+            inputs=(self,),
+            grad_fn=lambda gradient, *inputs: config.backend.expand_dims(gradient, axis=dim)
+        )
+
+        result = Tensor(
+            dtype=self.data_type,
+            requires_grad=self.requires_grad
+        )
+
+        result.node = node
+
+        return result
+
+
+    def unsqueeze(
+            self,
+            dim: Optional[Union[int, tuple]] = ()
+    ):
+        node = Operation(
+            name='unsqueeze',
+            operation=lambda x: config.backend.expand_dims(x, axis=dim),
+            inputs=(self,),
+            grad_fn=lambda gradient, *inputs: config.backend.squeeze(gradient, axis=dim)
+        )
+
+        result = Tensor(
+            dtype=self.data_type,
+            requires_grad=self.requires_grad
+        )
+
+        result.node = node
+
+        return result
+
+
     def as_strided(
             self,
             shape,
@@ -784,12 +822,13 @@ class Tensor:
             gradients = ()
 
             for i in range(len(inputs)):
+                # find dimensions (characters) in inputs and output (subscripts)
+                # that are not present in the output and are not repeated in the
+                # inputs which means that these dimension have been reduced/summed over
                 replace_dims = tuple((shape[dim], char) for (shape, subscript) in zip((_input.shape for _input in inputs), ordered_subscripts) for dim, char in enumerate(subscript) if char not in output_subscript)
                 recoup_dims = tuple(replace_dim for replace_dim, count in collections.Counter(replace_dims).items() if count == 1)
 
                 if recoup_dims:
-                    # check if input tensor had been reduced over its axes
-                    # during einsum computation
                     gradient_shape = gradient.shape
 
                     shape = tuple(recoup_dim[0] for recoup_dim in recoup_dims)
@@ -803,6 +842,9 @@ class Tensor:
                     gradient = config.backend.broadcast_to(config.backend.expand_dims(gradient, axis=tuple(range(len(gradient_shape), len(expanded_shape)))), expanded_shape)
 
                 reordered_subscripts = _reorder_subscripts(ordered_subscripts, output_subscript, i)
+
+                # reverse the einsum computation on the incoming gradient
+                # to get the local gradients
                 gradients += (config.backend.einsum(reordered_subscripts, gradient, *(_input for j, _input in enumerate(inputs) if j != i)),)
 
             return gradients
@@ -835,6 +877,16 @@ class Tensor:
             return self.node.fire()
 
         return self
+
+
+    def zero_grad(
+            self
+    ):
+        if self.requires_grad:
+            self.grad = zeros_like(self.data).data
+
+        else:
+            self.grad = None
 
 
     def backward(
@@ -952,7 +1004,7 @@ class Operation:
         if self.grad_fn is not None:
             gradients: tuple = self.grad_fn(gradient,
                                             *(input_tensor.data for input_tensor in self.inputs))
-
+            print(self.name, gradients)
             for node_input, input_grad in zip(self.inputs, gradients):
                 node_input.backward(input_grad)
 

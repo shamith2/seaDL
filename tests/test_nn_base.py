@@ -84,20 +84,40 @@ def test_module(pytest_configure):
     assert gradient_check(c_output, net.linear.bias, h=1e-6, error_tolerance=0.03)
 
 
-def test_auto_diff(pytest_configure):
+def test_auto_diff_1(pytest_configure):
     x = Tensor([[[[2.0, 3.0, 4.0, 5.0], [-2.0, -3.0, -4.0, -5.0]]], [[[2.0, 3.0, 4.0, 5.0], [-2.0, -3.0, -4.0, -5.0]]]])
 
     w = Tensor([[[[2.0, 3.0, 4.0, 5.0], [-2.0, -3.0, -4.0, -5.0]]], [[[2.0, 3.0, 4.0, 5.0], [-2.0, -3.0, -4.0, -5.0]]]], requires_grad=True)
 
-    einsum_op = w.einsum("ijmn->ij").fire()
+    einsum_op = w.einsum("ijmn->j").fire()
 
     einsum_op.backward()
 
     assert gradient_check(einsum_op, w, h=1e-6, error_tolerance=0.03)
+
+    w.zero_grad()
 
     einsum_op = x.einsum("ijkm,ijkn->in", w).fire()
 
     einsum_op.backward()
 
     assert gradient_check(einsum_op, w, h=1e-6, error_tolerance=0.06)
+
+
+def test_auto_diff_2(pytest_configure):
+    w = Tensor([[[[2.0, 3.0, 4.0, 5.0], [-2.0, -3.0, -4.0, -5.0]]], [[[2.0, 3.0, 4.0, 5.0], [-2.0, -3.0, -4.0, -5.0]]]], requires_grad=True)
+
+    sq_op = w.squeeze(dim=(1,)).fire()
+
+    sq_op.backward()
+
+    assert gradient_check(sq_op, w, h=1e-6, error_tolerance=0.03)
+
+    w.zero_grad()
+
+    unsq_op = w.unsqueeze(dim=(0,)).fire()
+
+    unsq_op.backward()
+
+    assert gradient_check(unsq_op, w, h=1e-6, error_tolerance=0.03)
 
