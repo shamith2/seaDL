@@ -3,6 +3,7 @@ from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
 import copy
+import collections
 
 from .config import config, ArrayType
 
@@ -102,7 +103,7 @@ class Tensor:
 
         Retrieve slices of elements from Tensor
         """
-        def grad_fn(gradient: ArrayType):
+        def _grad_fn(gradient: ArrayType, *inputs: Optional[tuple]):
             grad = zeros_like(gradient).data
             grad[indices] = gradient
 
@@ -113,7 +114,7 @@ class Tensor:
             name='get_slice',
             operation=lambda x: x[indices],
             inputs=(self,),
-            grad_fn=grad_fn
+            grad_fn=_grad_fn
         )
 
         result = Tensor(
@@ -473,6 +474,15 @@ class Tensor:
         return result
 
 
+    def sqrt(self):
+        """
+        Element-wise Square Root operation
+
+        Power operation with other = 0.5
+        """
+        return self.__pow__(0.5)
+
+
     # overload right-hand atomic-like operations
     def __iadd__(
             self,
@@ -524,6 +534,14 @@ class Tensor:
 
 
     # non-atomic operations
+    def sum(
+            self,
+            dim: Optional[tuple] = (),
+            keepdims: Optional[bool] = False
+    ):
+        raise ValueError("Not supported. Use .einsum() instead")
+
+
     def matmul(
             self,
             other: Self
@@ -563,15 +581,6 @@ class Tensor:
         return result
 
 
-    def sqrt(self):
-        """
-        Element-wise Square Root operation
-
-        Power operation with other = 0.5
-        """
-        return self.__pow__(0.5)
-
-
     # transformation operations
     def set_slice(
             self,
@@ -586,13 +595,13 @@ class Tensor:
         out[..., 1:3] = x is equivalent to
         out = out.set_slice((Ellipsis, slice(1, 3)), x)
         """
-        def grad_fn(gradient, *tensors):
+        def _grad_fn(gradient, *tensors):
             grad = zeros_like(gradient).data
             grad[indices] = gradient
 
             return (grad,)
 
-        def op(x, y):
+        def _operation(x, y):
             # x[indices] = y.astype(x.dtype)
             x[indices] = y
 
@@ -601,9 +610,9 @@ class Tensor:
 
         node = Operation(
             name='set_slice',
-            operation=op,
+            operation=_operation,
             inputs=(self, value),
-            grad_fn=grad_fn
+            grad_fn=_grad_fn
         )
 
         result = Tensor(
@@ -619,7 +628,7 @@ class Tensor:
 
     def transpose(
             self,
-            axes: Optional[tuple] = None
+            dim: Optional[tuple] = None
     ):
         """
         Transpose operation at the specified axes: y = x.T
@@ -632,9 +641,9 @@ class Tensor:
         """
         node = Operation(
             name='transpose',
-            operation=lambda x: config.backend.transpose(x, axes),
+            operation=lambda x: config.backend.transpose(x, dim),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: (config.backend.transpose(gradient, axes),)
+            grad_fn=lambda gradient, *inputs: (config.backend.transpose(gradient, dim),)
         )
 
         result = Tensor(
@@ -755,7 +764,7 @@ class Tensor:
             subscripts: str,
             *tensors: Self
     ):
-        def _reorder_subscripts_for_grad(ordered_subscripts, output_subscript, index):
+        def _reorder_subscripts(ordered_subscripts, output_subscript, index):
             main_tensor_subscript = ordered_subscripts[index]
             other_tensor_subscripts = tuple(ordered_subscripts[idx] for idx in range(len(ordered_subscripts)) if idx != index)
 
@@ -767,15 +776,33 @@ class Tensor:
             else:
                 return "{}->{}".format(output_subscript, main_tensor_subscript)
 
-        def grad_fn(gradient, *inputs):
+        def _grad_fn(gradient, *inputs):
             # subscripts split for each input/tensor, in same order as *tensors
             input_subscript, output_subscript = subscripts.split('->')
-            ordered_subscripts: tuple = tuple(input_subscript.split(','))
+            ordered_subscripts = tuple(input_subscript.split(','))
 
             gradients = ()
 
             for i in range(len(inputs)):
-                reordered_subscripts = _reorder_subscripts_for_grad(ordered_subscripts, output_subscript, i)
+                replace_dims = tuple((shape[dim], char) for (shape, subscript) in zip((_input.shape for _input in inputs), ordered_subscripts) for dim, char in enumerate(subscript) if char not in output_subscript)
+                recoup_dims = tuple(replace_dim for replace_dim, count in collections.Counter(replace_dims).items() if count == 1)
+
+                if recoup_dims:
+                    # check if input tensor had been reduced over its axes
+                    # during einsum computation
+                    gradient_shape = gradient.shape
+
+                    shape = tuple(recoup_dim[0] for recoup_dim in recoup_dims)
+                    recoup_subscript = ''.join(tuple(recoup_dim[1] for recoup_dim in recoup_dims))
+
+                    output_subscript = output_subscript + recoup_subscript
+
+                    # if the input tensor had been reduced over its axes,
+                    # expand and broadcast the gradient to get back the original shape
+                    expanded_shape = gradient_shape + shape
+                    gradient = config.backend.broadcast_to(config.backend.expand_dims(gradient, axis=tuple(range(len(gradient_shape), len(expanded_shape)))), expanded_shape)
+
+                reordered_subscripts = _reorder_subscripts(ordered_subscripts, output_subscript, i)
                 gradients += (config.backend.einsum(reordered_subscripts, gradient, *(_input for j, _input in enumerate(inputs) if j != i)),)
 
             return gradients
@@ -788,7 +815,7 @@ class Tensor:
             name='einsum',
             operation=lambda *tensors: config.backend.einsum(subscripts, *tensors),
             inputs=(self,) + tensors,
-            grad_fn=grad_fn
+            grad_fn=_grad_fn
         )
 
         result = Tensor(
@@ -824,7 +851,8 @@ class Tensor:
             gradient = ones_like(self.data).data
 
         # accumulate gradient at the current node: chain rule
-        self.grad += gradient
+        # inplace += is not used to avoid broadcasting error
+        self.grad = self.grad + gradient # implicit broadcasting
 
         _gradient: ArrayType = copy.deepcopy(self.grad)
 

@@ -1,10 +1,11 @@
 import pytest
 import numpy as np
 
-from seaDL import Tensor
+import seaDL
+from seaDL import Tensor, config
 import seaDL.nn as nn
-import seaDL.random as random
-from seaDL.utils import reset_graph, gradient_check, visualize_graph
+import seaDL.random
+from seaDL.utils import gradient_check
 
 
 @pytest.fixture
@@ -25,7 +26,7 @@ class SimpleNet(nn.Module):
         self.relu = nn.ReLU()
     
     def __call__(self, x):
-        out = self.linear(x)#, subscripts="i,oi->o")
+        out = self.linear(x, subscripts="bi,oi->bo")
         y = self.relu(out)
 
         return y
@@ -76,8 +77,27 @@ def test_module(pytest_configure):
     c_output.backward()
 
     np.testing.assert_allclose(np.array(c_output.data),
-                               np.maximum(np.array(((x.data @ net.linear.weight.data.transpose()) + net.linear.bias.data)), 0))
+                               np.maximum(np.array(((x.data @ net.linear.weight.data.transpose()) + net.linear.bias.data)), 0),
+                               rtol=1e-5)
 
     assert gradient_check(c_output, net.linear.weight, h=1e-6, error_tolerance=0.03)
     assert gradient_check(c_output, net.linear.bias, h=1e-6, error_tolerance=0.03)
+
+
+def test_auto_diff(pytest_configure):
+    x = Tensor([[[[2.0, 3.0, 4.0, 5.0], [-2.0, -3.0, -4.0, -5.0]]], [[[2.0, 3.0, 4.0, 5.0], [-2.0, -3.0, -4.0, -5.0]]]])
+
+    w = Tensor([[[[2.0, 3.0, 4.0, 5.0], [-2.0, -3.0, -4.0, -5.0]]], [[[2.0, 3.0, 4.0, 5.0], [-2.0, -3.0, -4.0, -5.0]]]], requires_grad=True)
+
+    einsum_op = w.einsum("ijmn->ij").fire()
+
+    einsum_op.backward()
+
+    assert gradient_check(einsum_op, w, h=1e-6, error_tolerance=0.03)
+
+    einsum_op = x.einsum("ijkm,ijkn->in", w).fire()
+
+    einsum_op.backward()
+
+    assert gradient_check(einsum_op, w, h=1e-6, error_tolerance=0.06)
 

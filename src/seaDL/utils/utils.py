@@ -208,6 +208,9 @@ def gradient_check(
 
     relative_error = difference_norm / gradient_norm
 
+    print("[gradient check] difference error: {}, gradient norm: {}, relative error: {}"
+          .format(difference_norm, gradient_norm, relative_error))
+
     return relative_error < error_tolerance
 
 

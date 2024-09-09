@@ -10,7 +10,7 @@ import seaDL.nn as nn
 
 @pytest.fixture
 def pytest_configure():
-    pytest.device = mx.gpu
+    pytest.device = None
 
 
 def test_nn_flatten(pytest_configure):
@@ -29,8 +29,7 @@ def test_nn_linear(pytest_configure):
     linear = nn.Linear(512, 64, bias=True)
     torch_linear = torch.nn.Linear(512, 64, bias=True)
 
-    einsum_linear = nn.Linear(512, 64, bias=True,
-                              subscripts="bci, oi -> bco")
+    einsum_linear = nn.Linear(512, 64, bias=True)
 
     params = linear._parameters
 
@@ -45,7 +44,7 @@ def test_nn_linear(pytest_configure):
     einsum_linear.weight = Tensor(np.array(torch_linear.weight.detach().clone()))
     einsum_linear.bias = Tensor(np.array(torch_linear.bias.detach().clone()))
 
-    actual = linear(x).fire()
+    actual = linear(x, subscripts="bci,oi->bco").fire()
     actual_torch = torch.from_numpy(np.array(actual.data))
 
     actual_einsum = einsum_linear(x).fire()

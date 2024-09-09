@@ -13,7 +13,8 @@ def uniform(
         shape: tuple,
         low: float = 0.0,
         high: float = 1.0,
-        dtype: Optional[DataType] = DataType('float32')
+        dtype: Optional[DataType] = DataType('float32'),
+        requires_grad: Optional[bool] = False
 ):
     if config.is_backend_mlx():
         data = config.backend.random.uniform(
@@ -33,7 +34,8 @@ def uniform(
 
     return Tensor(
         data=data,
-        dtype=dtype
+        dtype=dtype,
+        requires_grad=requires_grad
     )
 
 
@@ -42,7 +44,8 @@ def normal(
         shape: tuple,
         mean: float = 0.0,
         scale: float = 1.0,
-        dtype: Optional[DataType] = DataType('float32')
+        dtype: Optional[DataType] = DataType('float32'),
+        requires_grad: Optional[bool] = False
 ):
     if config.is_backend_mlx():
         data=config.backend.random.normal(
@@ -62,6 +65,7 @@ def normal(
 
     return Tensor(
         data=data,
-        dtype=dtype
+        dtype=dtype,
+        requires_grad=requires_grad
     )
 
