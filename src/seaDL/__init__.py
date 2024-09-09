@@ -8,3 +8,4 @@ from .config import config
 # imports
 from .base import Tensor, Operation, Device, DataType
 from .base import zeros_like, ones_like
+from .base import prod

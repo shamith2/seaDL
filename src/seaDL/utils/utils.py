@@ -4,7 +4,6 @@ from typeguard import typechecked as typechecker
 
 import copy
 from collections import namedtuple
-from functools import reduce
 import itertools
 import random
 import numpy as np
@@ -12,16 +11,9 @@ import torch
 import mlx.core as mx
 
 from ..config import config, ArrayType
-from ..base import Tensor, DataType, zeros_like
+from ..base import Tensor, zeros_like
 
 from graphviz import Digraph
-
-
-@jaxtyped(typechecker=typechecker)
-def prod(
-    array: Union[tuple, list]
-): 
-    return reduce((lambda x, y: x * y), array)
 
 
 @jaxtyped(typechecker=typechecker)

@@ -7,7 +7,7 @@ import math
 from ..base import Tensor, Device, DataType
 from .base import Parameter, Module
 from ..random import uniform
-from ..utils import prod
+from ..base import prod
 
 
 @jaxtyped(typechecker=typechecker)

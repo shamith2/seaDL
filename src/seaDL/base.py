@@ -4,6 +4,7 @@ from typeguard import typechecked as typechecker
 
 import copy
 import collections
+import functools
 
 from .config import config, ArrayType
 
@@ -538,6 +539,29 @@ class Tensor:
         raise ValueError("Not supported. Use .einsum() instead")
 
 
+    def mean(
+            self,
+            dim: Optional[tuple] = (),
+            keepdims: Optional[bool] = False
+    ):
+        node = Operation(
+            name='mean',
+            operation=lambda x: config.backend.mean(x, axis=dim, keepdims=keepdims),
+            inputs=(self,),
+            grad_fn=lambda gradient, *inputs: (config.backend.expand_dims(gradient, axis=dim) *
+                                               (config.backend.ones_like(inputs[0]) / prod(tuple(self.shape[d] for d in dim))),)
+        )
+
+        result = Tensor(
+            dtype=self.data_type,
+            requires_grad=self.requires_grad
+        )
+
+        result.node = node
+
+        return result
+
+
     def matmul(
             self,
             other: Self
@@ -1004,7 +1028,7 @@ class Operation:
         if self.grad_fn is not None:
             gradients: tuple = self.grad_fn(gradient,
                                             *(input_tensor.data for input_tensor in self.inputs))
-            print(self.name, gradients)
+
             for node_input, input_grad in zip(self.inputs, gradients):
                 node_input.backward(input_grad)
 
@@ -1062,4 +1086,12 @@ def full(
         data=config.backend.full(shape, fill_value),
         dtype=dtype
     )
+
+
+# defined here to avoid circular import dependency
+@jaxtyped(typechecker=typechecker)
+def prod(
+    array: Union[tuple, list]
+): 
+    return functools.reduce((lambda x, y: x * y), array)
 
