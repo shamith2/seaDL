@@ -45,7 +45,10 @@ def test_parameter(pytest_configure):
     result_sub_2 = param1 - 3.0
 
     result_mul_1 = param1.mul(param2)
-    result_mul_2 = param1.mul(5.0)
+    result_mul_2 = param2.mul(5.0)
+
+    result_div_1 = param1.div(param2)
+    result_div_2 = param2.div(5.0)
 
     result_pow_1 = param1 ** 2
     result_pow_2 = param1 ** param2
@@ -59,7 +62,10 @@ def test_parameter(pytest_configure):
     np.testing.assert_allclose(np.array(result_sub_2.fire().data), np.array([-2.0, -5.0, 0.0]))
 
     np.testing.assert_allclose(np.array(result_mul_1.fire().data), np.array([4.0, -10.0, 18.0]))
-    np.testing.assert_allclose(np.array(result_mul_2.fire().data), np.array([5.0, -10.0, 15.0]))
+    np.testing.assert_allclose(np.array(result_mul_2.fire().data), np.array([20.0, 25.0, 30.0]))
+
+    np.testing.assert_allclose(np.array(result_div_1.fire().data), np.array([0.25, -0.4, 0.5]))
+    np.testing.assert_allclose(np.array(result_div_2.fire().data), np.array([0.8, 1.0, 1.2]))
 
     np.testing.assert_allclose(np.array(result_pow_1.fire().data), np.array([1.0, 4.0, 9.0]))
     np.testing.assert_allclose(np.array(result_pow_2.fire().data), np.array([1.0, -32.0, 729.0]))
@@ -111,7 +117,7 @@ def test_auto_diff_2(pytest_configure):
 
     sq_op.backward()
 
-    # assert gradient_check(sq_op, w, h=1e-6, error_tolerance=0.03)
+    assert gradient_check(sq_op, w, h=1e-6, error_tolerance=0.03)
 
     w.zero_grad()
 
@@ -119,7 +125,7 @@ def test_auto_diff_2(pytest_configure):
 
     unsq_op.backward()
 
-    # assert gradient_check(unsq_op, w, h=1e-6, error_tolerance=0.03)
+    assert gradient_check(unsq_op, w, h=1e-6, error_tolerance=0.03)
 
     w.zero_grad()
 
@@ -128,4 +134,12 @@ def test_auto_diff_2(pytest_configure):
     mean_op.backward()
 
     assert gradient_check(mean_op, w, h=1e-6, error_tolerance=0.03)
+
+    w.zero_grad()
+
+    max_op = w.max(dim=(-3, -1)).fire()
+
+    max_op.backward()
+
+    assert gradient_check(max_op, w, h=1e-6, error_tolerance=0.03)
 

@@ -2,8 +2,6 @@ from typing import Union, Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-import mlx.core as mx
-
 from ...config import config
 from ...base import Tensor, Device
 from .convolution import pad2d
@@ -48,9 +46,7 @@ def maxpool2d(
         strides=(x_dimb, x_dimc, x_dimh * stride[0], x_dimw * stride[1], x_dimh, x_dimw)
     )
 
-    x_max = mx.max(x_prime.data, axis=(-2, -1))
-
-    return Tensor(x_max)
+    return x_prime.max(dim=(-2, -1))
 
 
 @jaxtyped(typechecker=typechecker)
@@ -62,7 +58,5 @@ def averagepool2d(
     x: shape (batch, channels, height, width)
     Return: shape (batch, channels)
     """
-    out = mx.mean(x.data, axis=(-2, -1))
-
-    return Tensor(out)
+    return x.mean(dim=(-2, -1))
 

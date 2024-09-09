@@ -4,12 +4,13 @@ import numpy as np
 import mlx.core as mx
 import pytest
 
+import seaDL
 from seaDL.nn import MaxPool2d, AveragePool2d
 
 
 @pytest.fixture
 def pytest_configure():
-    pytest.device = mx.gpu
+    pytest.device = None
     pytest.n_tests = 10
     pytest.tuples = True
     pytest.use_bias = True
@@ -33,18 +34,17 @@ def test_nn_maxpool2d(pytest_configure):
             kernel_size = mx.random.randint(1, 10)
             padding = mx.random.randint(0, 1 + kernel_size // 2)
 
-        x = mx.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
-        x_torch = torch.from_numpy(np.array(x))
+        x = seaDL.random.normal(shape=(b.item(), ci.item(), h.item(), w.item()))
+        x_torch = torch.from_numpy(np.array(x.data))
 
         my_maxpool2d = MaxPool2d(
             kernel_size,
             stride=stride,
-            padding=padding,
-            device=pytest.device
+            padding=padding
         )
 
-        my_output = my_maxpool2d(x)
-        my_output_torch = torch.from_numpy(np.array(my_output))
+        my_output = my_maxpool2d(x).fire()
+        my_output_torch = torch.from_numpy(np.array(my_output.data))
 
         torch_output = nn.MaxPool2d(
             kernel_size,
@@ -58,10 +58,10 @@ def test_nn_maxpool2d(pytest_configure):
 
 
 def test_averagepool(pytest_configure):
-    x = mx.arange(24, dtype=mx.float32).reshape((1, 2, 3, 4))
+    x = seaDL.Tensor(mx.arange(24)).reshape((1, 2, 3, 4))
 
-    actual = AveragePool2d(device=pytest.device)(x)
+    actual = AveragePool2d()(x).fire()
 
-    expected = mx.array([[5.5, 17.5]])
-    assert mx.allclose(actual, expected).all()
+    expected = np.array([[5.5, 17.5]])
+    np.testing.assert_allclose(np.array(actual.data), expected)
 

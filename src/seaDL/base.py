@@ -365,6 +365,57 @@ class Tensor:
         return result
 
 
+    def div(
+            self,
+            other: Union[int, float, ArrayType, Self]
+    ):
+        """
+        Element-wise Division operation: y = x / other
+        where other is a Tensor or constant
+
+        inputs <- (x, other)
+        gradient <- d (Loss) / d (y)
+
+        d (x * other) / d (x) = 1 / other,
+        d (x * other) / d (other) = -x / (other ** 2)
+        gradient -> [x * other] -> (gradient * other, gradient * x)
+        """
+        if isinstance(other, Tensor):
+            node = Operation(
+                name='div',
+                operation=lambda x, y: x / y,
+                inputs=(self, other),
+                grad_fn=lambda gradient, *inputs: (gradient / inputs[1],
+                                                   -gradient * (inputs[0] / inputs[1] ** 2))
+            )
+
+            result = Tensor(
+                dtype=self.data_type,
+                requires_grad=(self.requires_grad or other.requires_grad)
+            )
+
+            # result of node
+            result.node = node
+
+        else:
+            node = Operation(
+                name='div',
+                operation=lambda x : x / other,
+                inputs=(self,),
+                grad_fn=lambda gradient, *inputs: (gradient / inputs[1],)
+            )
+
+            result = Tensor(
+                dtype=self.data_type,
+                requires_grad=self.requires_grad
+            )
+
+            # result of node
+            result.node = node
+        
+        return result
+
+
     def __neg__(self):
         """
         Negate operation: y = -x
@@ -530,11 +581,32 @@ class Tensor:
         raise ValueError("Not supported. Use .mul() instead")
 
 
+    def __truediv__(
+            self,
+            other: Union[int, float, ArrayType, Self]
+    ):
+        raise ValueError("Not supported. Use .div() instead")
+
+
+    def __itruediv__(
+            self,
+            other: Union[int, float, ArrayType, Self]
+    ):
+        raise ValueError("Not supported. Use .div() instead")
+
+
+    def __rtruediv__(
+            self,
+            other: Union[int, float, ArrayType, Self]
+    ):
+        raise ValueError("Not supported. Use .div() instead")
+
+
     # non-atomic operations
     def sum(
             self,
             dim: Optional[tuple] = (),
-            keepdims: Optional[bool] = False
+            keepdim: Optional[bool] = False
     ):
         raise ValueError("Not supported. Use .einsum() instead")
 
@@ -542,14 +614,51 @@ class Tensor:
     def mean(
             self,
             dim: Optional[tuple] = (),
-            keepdims: Optional[bool] = False
+            keepdim: Optional[bool] = False
     ):
         node = Operation(
             name='mean',
-            operation=lambda x: config.backend.mean(x, axis=dim, keepdims=keepdims),
+            operation=lambda x: config.backend.mean(x, axis=dim, keepdims=keepdim),
             inputs=(self,),
             grad_fn=lambda gradient, *inputs: (config.backend.expand_dims(gradient, axis=dim) *
                                                (config.backend.ones_like(inputs[0]) / prod(tuple(self.shape[d] for d in dim))),)
+        )
+
+        result = Tensor(
+            dtype=self.data_type,
+            requires_grad=self.requires_grad
+        )
+
+        result.node = node
+
+        return result
+
+
+    def max(
+            self,
+            dim: Optional[tuple] = (),
+            keepdim: Optional[bool] = False
+    ):
+        def _grad_fn(gradient, *inputs):
+            data = inputs[0]
+            _gradient = config.backend.zeros_like(data)
+
+            max_values = config.backend.max(data, axis=dim, keepdims=True)
+
+            # propogate the gradient only through the maximum values
+            # of the result tensor
+            _gradient = config.backend.where(data == max_values,
+                                             config.backend.expand_dims(gradient, axis=dim),
+                                             0)
+
+            return (_gradient,)
+
+
+        node = Operation(
+            name='max',
+            operation=lambda x: config.backend.max(x, axis=dim, keepdims=keepdim),
+            inputs=(self,),
+            grad_fn=_grad_fn
         )
 
         result = Tensor(
