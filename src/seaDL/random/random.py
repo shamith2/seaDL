@@ -1,4 +1,4 @@
-# Wrapper fucntions for relevant random library functions from backend
+# Wrapper fucntions for required random library functions from backend
 
 from typing import Optional
 from jaxtyping import jaxtyped

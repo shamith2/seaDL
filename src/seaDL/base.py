@@ -645,17 +645,17 @@ class Tensor:
     ):
         def _grad_fn(gradient, *inputs):
             data = inputs[0]
-            _gradient = config.backend.zeros_like(data)
+            input_gradient = config.backend.zeros_like(data)
 
             max_values = config.backend.max(data, axis=dim, keepdims=True)
 
             # propogate the gradient only through the maximum values
             # of the result tensor
-            _gradient = config.backend.where(data == max_values,
-                                             config.backend.expand_dims(gradient, axis=dim),
-                                             0)
+            input_gradient = config.backend.where(data == max_values,
+                                                  config.backend.expand_dims(gradient, axis=dim),
+                                                  0)
 
-            return (_gradient,)
+            return (input_gradient,)
 
 
         node = Operation(
