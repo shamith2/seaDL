@@ -169,7 +169,7 @@ def gradient_check(
         reset_graph(root, reference_tensor)
 
         # pertube one element at a time
-        reference_tensor.data[idx] = original_value[idx] + h
+        reference_tensor.data[idx] = config.backend.add(original_value[idx], h)
 
         # fn(p + h)
         fire(root)
@@ -182,7 +182,7 @@ def gradient_check(
         reset_graph(root, reference_tensor)
 
         # pertube one element at a time
-        reference_tensor.data[idx] = original_value[idx] - h
+        reference_tensor.data[idx] = config.backend.subtract(original_value[idx], h)
 
         # fn(p - h)
         fire(root)
@@ -191,7 +191,7 @@ def gradient_check(
         # change the element back to its original value
         reference_tensor.data[idx] = original_value[idx]
 
-        numerical_gradient[idx] = (fn_plus - fn_minus).sum() / (2 * h)
+        numerical_gradient[idx] = config.backend.divide(config.backend.subtract(fn_plus, fn_minus).sum(), config.backend.multiply(h, 2))
 
     # reset gradient
     reference_tensor.grad = analytical_gradient
@@ -200,10 +200,9 @@ def gradient_check(
     if strict:
         assert analytical_gradient.shape == numerical_gradient.shape, "[gradient check] shape of analytical and numerical gradient are not equal"
 
-    difference_norm = np.linalg.norm(np.array(analytical_gradient) - np.array(numerical_gradient))
+    difference_norm = config.backend.linalg.norm(config.backend.subtract(analytical_gradient, numerical_gradient))
 
-    gradient_norm = (np.linalg.norm(np.array(analytical_gradient)) +
-                     np.linalg.norm(np.array(numerical_gradient)))
+    gradient_norm = config.backend.add(config.backend.linalg.norm(analytical_gradient), config.backend.linalg.norm(numerical_gradient))
 
     relative_error = difference_norm / gradient_norm
 
