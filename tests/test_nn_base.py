@@ -42,11 +42,11 @@ def test_parameter(pytest_configure):
     result_sub_1 = param1 - param2
     result_sub_2 = param1 - 3.0
 
-    result_mul_1 = param1.mul(param2)
-    result_mul_2 = param2.mul(5.0)
+    result_mul_1 = param1 * param2
+    result_mul_2 = param2 * 5.0
 
-    result_div_1 = param1.div(param2)
-    result_div_2 = param2.div(5.0)
+    result_div_1 = param1 / param2
+    result_div_2 = param2 / 5.0
 
     result_pow_1 = param1 ** 2
     result_pow_2 = param1 ** param2
