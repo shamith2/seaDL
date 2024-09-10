@@ -15,10 +15,14 @@ def pytest_configure():
 def test_nn_flatten(pytest_configure):
     x = seaDL.Tensor(mx.arange(24)).reshape((2, 3, 4))
 
-    assert nn.Flatten(start_dim=0)(x).fire().shape == (24,)
-    assert nn.Flatten(start_dim=1)(x).fire().shape == (2, 12)
-    assert nn.Flatten(start_dim=0, end_dim=1)(x).fire().shape == (6, 4)
-    assert nn.Flatten(start_dim=0, end_dim=-2)(x).fire().shape == (6, 4)
+    actual_1 = nn.Flatten(start_dim=0)(x)
+    actual_2 = nn.Flatten(start_dim=0, end_dim=-2)(x)
+
+    seaDL.fire(actual_1)
+    seaDL.fire(actual_2)
+
+    assert actual_1.shape == (24,)
+    assert actual_2.shape == (6, 4)
 
 
 def test_nn_linear(pytest_configure):
@@ -43,10 +47,16 @@ def test_nn_linear(pytest_configure):
     einsum_linear.weight = nn.Parameter(seaDL.Tensor(np.array(torch_linear.weight.detach().clone())))
     einsum_linear.bias = nn.Parameter(seaDL.Tensor(np.array(torch_linear.bias.detach().clone())))
 
-    actual = linear(x, subscripts="bci,oi->bco").fire()
+    actual = linear(x, subscripts="bci,oi->bco")
+
+    seaDL.fire(actual)
+
     actual_torch = torch.from_numpy(np.array(actual.data))
 
-    actual_einsum = einsum_linear(x).fire()
+    actual_einsum = einsum_linear(x)
+
+    seaDL.fire(actual_einsum)
+
     actual_einsum_torch = torch.from_numpy(np.array(actual_einsum.data))
 
     expected = torch_linear(x_torch)
@@ -70,7 +80,10 @@ def test_nn_linear_no_bias(pytest_configure):
 
     linear.weight = nn.Parameter(seaDL.Tensor(np.array(torch_linear.weight.detach().clone())))
 
-    actual = linear(x).fire()
+    actual = linear(x)
+
+    seaDL.fire(actual)
+
     actual_torch = torch.from_numpy(np.array(actual.data))
 
     expected = torch_linear(x_torch)

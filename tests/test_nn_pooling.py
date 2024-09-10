@@ -43,7 +43,10 @@ def test_nn_maxpool2d(pytest_configure):
             padding=padding
         )
 
-        my_output = my_maxpool2d(x).fire()
+        my_output = my_maxpool2d(x)
+
+        seaDL.fire(my_output)
+
         my_output_torch = torch.from_numpy(np.array(my_output.data))
 
         torch_output = nn.MaxPool2d(
@@ -60,7 +63,9 @@ def test_nn_maxpool2d(pytest_configure):
 def test_averagepool(pytest_configure):
     x = seaDL.Tensor(mx.arange(24)).reshape((1, 2, 3, 4))
 
-    actual = AveragePool2d()(x).fire()
+    actual = AveragePool2d()(x)
+
+    seaDL.fire(actual)
 
     expected = np.array([[5.5, 17.5]])
     np.testing.assert_allclose(np.array(actual.data), expected)

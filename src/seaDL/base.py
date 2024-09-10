@@ -67,7 +67,11 @@ class Tensor:
 
         # operation in the computational graph
         # that connects this Tensor
-        self.node: Operation = None
+        self.operation: Optional[Operation] = None
+
+        # index of Tensor in the Tensor's operation output
+        # if output is a list of Tensors
+        self.output_index: Optional[int] = None
 
         # whether to compute gradient for the node
         self.requires_grad = requires_grad
@@ -120,7 +124,7 @@ class Tensor:
         )
 
         # result of node
-        result.node = node
+        result.operation = node
 
         return result
 
@@ -138,12 +142,11 @@ class Tensor:
         This operation fires the computational graph
         """
         if self.numel() == 0:
-            result = self.node.fire()
+            result = self.operation.fire()
 
             self.__dict__.update(result.__dict__)
 
-        self.data[indices] = (value.data if isinstance(value, Tensor)
-                              else value)
+        self.data[indices] = value.data if isinstance(value, Tensor) else value
 
 
     @property
@@ -152,10 +155,11 @@ class Tensor:
             # when .shape is called,
             # if Tensor has not been computed,
             # compute the Tensor
-            fired_tensor = self.fire()
+            if self.operation is not None:
+                fired_value = self.operation.fire()
 
-            # updated the Tensor after computation
-            self.__dict__.update(fired_tensor.__dict__)
+                # updated the Tensor after computation
+                self.data = fired_value
 
         return self.data.shape
 
@@ -193,7 +197,7 @@ class Tensor:
         if config.is_backend_numpy():
             strides = strides * self.itemsize
 
-        return strides.tolist()
+        return tuple(strides.tolist())
 
 
     def astype(
@@ -248,7 +252,7 @@ class Tensor:
             )
 
             # result of node
-            result.node = node
+            result.operation = node
 
         else:
             node = Operation(
@@ -263,7 +267,7 @@ class Tensor:
                 requires_grad=self.requires_grad
             )
 
-            result.node = node
+            result.operation = node
 
         return result
 
@@ -295,7 +299,7 @@ class Tensor:
             )
 
             # result of node
-            result.node = node
+            result.operation = node
 
         else:
             node = Operation(
@@ -310,7 +314,7 @@ class Tensor:
                 requires_grad=self.requires_grad
             )
 
-            result.node = node
+            result.operation = node
 
         return result
 
@@ -344,7 +348,7 @@ class Tensor:
             )
 
             # result of node
-            result.node = node
+            result.operation = node
 
         else:
             node = Operation(
@@ -360,7 +364,7 @@ class Tensor:
             )
 
             # result of node
-            result.node = node
+            result.operation = node
         
         return result
 
@@ -395,7 +399,7 @@ class Tensor:
             )
 
             # result of node
-            result.node = node
+            result.operation = node
 
         else:
             node = Operation(
@@ -411,7 +415,7 @@ class Tensor:
             )
 
             # result of node
-            result.node = node
+            result.operation = node
         
         return result
 
@@ -439,7 +443,7 @@ class Tensor:
         )
 
         # result of node
-        result.node = node
+        result.operation = node
 
         return result
 
@@ -466,7 +470,7 @@ class Tensor:
             requires_grad=self.requires_grad
         )
 
-        result.node = node
+        result.operation = node
 
         return result
 
@@ -502,7 +506,7 @@ class Tensor:
             )
 
             # result of node
-            result.node = node
+            result.operation = node
 
         else:
             node = Operation(
@@ -517,7 +521,7 @@ class Tensor:
                 requires_grad=self.requires_grad
             )
 
-            result.node = node
+            result.operation = node
 
         return result
 
@@ -629,7 +633,7 @@ class Tensor:
             requires_grad=self.requires_grad
         )
 
-        result.node = node
+        result.operation = node
 
         return result
 
@@ -666,7 +670,7 @@ class Tensor:
             requires_grad=self.requires_grad
         )
 
-        result.node = node
+        result.operation = node
 
         return result
 
@@ -705,7 +709,7 @@ class Tensor:
         )
 
         # result of node
-        result.node = node
+        result.operation = node
     
         return result
 
@@ -750,7 +754,7 @@ class Tensor:
         )
 
         # result of node
-        result.node = node
+        result.operation = node
 
         return result
 
@@ -780,7 +784,7 @@ class Tensor:
             requires_grad=self.requires_grad
         )
 
-        result.node = node
+        result.operation = node
 
         return result
 
@@ -811,7 +815,7 @@ class Tensor:
             requires_grad=self.requires_grad
         )
 
-        result.node = node
+        result.operation = node
 
         return result
 
@@ -832,7 +836,7 @@ class Tensor:
             requires_grad=self.requires_grad
         )
 
-        result.node = node
+        result.operation = node
 
         return result
 
@@ -853,7 +857,66 @@ class Tensor:
             requires_grad=self.requires_grad
         )
 
-        result.node = node
+        result.operation = node
+
+        return result
+
+
+    def cat(
+            self,
+            tensors: tuple,
+            dim: int = 0
+    ):
+        def _grad_fn(gradient, *inputs):
+            input_split_size = tuple(node_input.shape[dim] for node_input in inputs)
+            input_split_size = tuple(config.backend.cumsum(config.Array(input_split_size[:-1])).tolist())
+
+            return tuple(config.backend.split(gradient, input_split_size, axis=dim))
+
+
+        node = Operation(
+            name='cat',
+            operation=lambda *inputs: config.backend.concatenate(inputs, axis=dim),
+            inputs=(self,) + tensors,
+            grad_fn=_grad_fn
+        )
+
+        result = Tensor(
+            dtype=self.data_type,
+            requires_grad=self.requires_grad
+        )
+
+        result.operation = node
+
+        return result
+
+
+    def split(
+            self,
+            split_size_or_sections: Union[int, tuple],
+            dim: int = 0
+    ):
+        node = Operation(
+            name='split',
+            operation=lambda x: config.backend.split(x, split_size_or_sections, axis=dim),
+            inputs=(self,),
+            grad_fn=lambda gradient, *inputs: config.backend.concatenate(gradient, axis=dim)
+        )
+
+        result = ()
+
+        split_sizes = split_size_or_sections if isinstance(split_size_or_sections, int) else len(split_size_or_sections)
+
+        for idx in range(split_sizes):
+            r = Tensor(
+                dtype=self.data_type,
+                requires_grad=self.requires_grad
+            )
+
+            r.operation = node
+            r.output_index = idx
+
+            result += (r,)
 
         return result
 
@@ -875,7 +938,7 @@ class Tensor:
             requires_grad=self.requires_grad
         )
 
-        result.node = node
+        result.operation = node
 
         return result
 
@@ -910,7 +973,7 @@ class Tensor:
                 requires_grad=(self.requires_grad or other.requires_grad)
             )
 
-            result.node = node
+            result.operation = node
 
         else:
             node = Operation(
@@ -925,7 +988,7 @@ class Tensor:
                 requires_grad=self.requires_grad
             )
 
-            result.node = node
+            result.operation = node
 
         return result
 
@@ -998,18 +1061,9 @@ class Tensor:
                            any(tensor.requires_grad for tensor in tensors))
         )
 
-        result.node = node
+        result.operation = node
 
         return result
-
-
-    def fire(self):
-        if self.node is not None:
-            # return computed Tensor
-            # if operation is valid
-            return self.node.fire()
-
-        return self
 
 
     def zero_grad(
@@ -1037,17 +1091,15 @@ class Tensor:
 
         # accumulate gradient at the current node: chain rule
         # inplace += is not used to avoid broadcasting error
-        self.grad = self.grad + gradient # implicit broadcasting
+        self.grad: ArrayType = self.grad + gradient # implicit broadcasting
 
-        _gradient: ArrayType = copy.deepcopy(self.grad)
-
-        if self.node is not None:
-            self.node.backward(_gradient)
+        if self.operation is not None:
+            self.operation.backward(copy.deepcopy(self.grad))
 
 
     def sprint(self):
-        return "Tensor(data: {}, dtype: {}, grad: {}, requires_grad: {})".format(
-            self.data, self.data_type.value_as_str, self.grad, self.requires_grad
+        return "Tensor(data: {}, shape: {}, dtype: {}, grad: {}, requires_grad: {})".format(
+            self.data, self.data.shape, self.data_type.value_as_str, self.grad, self.requires_grad
         )
 
 
@@ -1074,7 +1126,7 @@ class Operation:
             grad_fn: Any = None
     ):
         # value of node
-        self.value = Tensor()
+        self.value: Union[tuple, list, ArrayType] = config.Array(())
 
         # operation fn
         self.operation = operation
@@ -1105,27 +1157,22 @@ class Operation:
         if not self.fired:
             # update self.inputs with the computed Tensor
             # after computing the inputs to the Operation
-            self.inputs = tuple(node_input.fire() for node_input in self.inputs)
+            # self.inputs = tuple(node_input.fire() for node_input in self.inputs)
+            for node_input in self.inputs:
+                fire(node_input)
 
             # compute the values of the inputs to the operation
             # and generate a new Tensor
-            self.value = Tensor(
-                data=self.operation(*(tensor.data for tensor in self.inputs)),
-                requires_grad=any(node_input.requires_grad for node_input in self.inputs)
-            )
+            self.value = self.operation(*(tensor.data for tensor in self.inputs))
 
             self.fired = True
-
-            # connect the new computed Tensor
-            # to this Operation
-            self.value.node = self
 
         return self.value
 
 
     def backward(
             self,
-            gradient: ArrayType
+            gradient: Union[tuple, ArrayType]
     ):
         """
         Implement backpropogation: compute gradients for node
@@ -1149,6 +1196,7 @@ class Operation:
 
 
 # functions
+# defined here to avoid circular import dependency
 @jaxtyped(typechecker=typechecker)
 def zeros_like(
         tensor: Union[Tensor, ArrayType]
@@ -1197,10 +1245,31 @@ def full(
     )
 
 
-# defined here to avoid circular import dependency
 @jaxtyped(typechecker=typechecker)
 def prod(
     array: Union[tuple, list]
 ): 
     return functools.reduce((lambda x, y: x * y), array)
+
+
+@jaxtyped(typechecker=typechecker)
+def fire(root: Tensor):
+    """
+    Fire the computational graph
+    """
+    operation = root.operation
+
+    if operation is not None:
+        # update result
+        result: Union[tuple, list, ArrayType] = operation.fire()
+
+        if not isinstance(result, ArrayType):
+            root.data = result[root.output_index]
+
+        else:
+            root.data = result
+
+        # initialize gradient for Tensor
+        if root.requires_grad and root.grad.size == 0:
+            root.zero_grad()
 

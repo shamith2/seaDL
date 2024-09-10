@@ -11,7 +11,7 @@ import torch
 import mlx.core as mx
 
 from ..config import config, ArrayType
-from ..base import Tensor, zeros_like
+from ..base import Tensor, fire, zeros_like
 
 from graphviz import Digraph
 
@@ -48,7 +48,7 @@ def trace_graph(
         if tensor not in nodes:
             nodes.add(tensor)
 
-            operation = tensor.node
+            operation = tensor.operation
 
             if operation is not None:
                 nodes.add(operation)
@@ -116,7 +116,7 @@ def reset_graph(
         if tensor not in nodes:
             nodes.add(tensor)
 
-            operation = tensor.node
+            operation = tensor.operation
 
             if operation is not None:
                 operation.fired = False
@@ -136,7 +136,8 @@ def gradient_check(
         root: Tensor,
         reference_tensor: Tensor,
         h: float = 1e-6,
-        error_tolerance: float = 0.05
+        error_tolerance: float = 0.05,
+        strict: Optional[bool] = False
 ) -> bool:
     """
     Return True if analytical gradient and numerical gradient are close
@@ -171,7 +172,8 @@ def gradient_check(
         reference_tensor.data[idx] = original_value[idx] + h
 
         # fn(p + h)
-        fn_plus = root.fire()
+        fire(root)
+        fn_plus = copy.deepcopy(root.data)
 
         # change the element back to its original value
         reference_tensor.data[idx] = original_value[idx]
@@ -183,15 +185,20 @@ def gradient_check(
         reference_tensor.data[idx] = original_value[idx] - h
 
         # fn(p - h)
-        fn_minus = root.fire()
+        fire(root)
+        fn_minus = copy.deepcopy(root.data)
 
         # change the element back to its original value
         reference_tensor.data[idx] = original_value[idx]
 
-        numerical_gradient[idx] = (fn_plus.data - fn_minus.data).sum() / (2 * h)
+        numerical_gradient[idx] = (fn_plus - fn_minus).sum() / (2 * h)
 
     # reset gradient
     reference_tensor.grad = analytical_gradient
+
+    # dimensionality check
+    if strict:
+        assert analytical_gradient.shape == numerical_gradient.shape, "[gradient check] shape of analytical and numerical gradient are not equal"
 
     difference_norm = np.linalg.norm(np.array(analytical_gradient) - np.array(numerical_gradient))
 

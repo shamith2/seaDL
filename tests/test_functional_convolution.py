@@ -16,12 +16,16 @@ def pytest_configure():
 def test_pad1d(pytest_configure):
     x = seaDL.Tensor(mx.arange(4)).reshape((1, 1, 4))
 
-    actual = nn.functional.pad1d(x, 1, 3, -2.0).fire()
+    actual = nn.functional.pad1d(x, 1, 3, -2.0)
+    seaDL.fire(actual)
+
     expected = np.array([[[-2.0, 0.0, 1.0, 2.0, 3.0, -2.0, -2.0, -2.0]]])
 
     np.testing.assert_allclose(np.array(actual.data), expected)
 
-    actual = nn.functional.pad1d(x, 1, 0, -2.0).fire()
+    actual = nn.functional.pad1d(x, 1, 0, -2.0)
+    seaDL.fire(actual)
+
     expected = np.array([[[-2.0, 0.0, 1.0, 2.0, 3.0]]])
 
     np.testing.assert_allclose(np.array(actual.data), expected)
@@ -30,7 +34,9 @@ def test_pad1d(pytest_configure):
 def test_pad1d_multi_channel(pytest_configure):
     x = seaDL.Tensor(mx.arange(4)).reshape((1, 2, 2))
 
-    actual = nn.functional.pad1d(x, 0, 2, -3.0).fire()
+    actual = nn.functional.pad1d(x, 0, 2, -3.0)
+    seaDL.fire(actual)
+
     expected = np.array([[[0.0, 1.0, -3.0, -3.0], [2.0, 3.0, -3.0, -3.0]]])
 
     np.testing.assert_allclose(np.array(actual.data), expected)
@@ -39,7 +45,8 @@ def test_pad1d_multi_channel(pytest_configure):
 def test_pad2d(pytest_configure):
     x = seaDL.Tensor(mx.arange(4)).reshape((1, 1, 2, 2))
 
-    actual = nn.functional.pad2d(x, 2, 3, 0, 1, 0.0).fire()
+    actual = nn.functional.pad2d(x, 2, 3, 0, 1, 0.0)
+    seaDL.fire(actual)
 
     expected = np.array([[[
         [0.0, 0.0, 0.0],
@@ -61,7 +68,9 @@ def test_pad2d_multi_channel(pytest_configure):
     '''
     x = seaDL.Tensor(mx.arange(4)).reshape((1, 2, 2, 1))
 
-    actual = nn.functional.pad2d(x, 0, 1, 1, 0, -1.0).fire()
+    actual = nn.functional.pad2d(x, 0, 1, 1, 0, -1.0)
+    seaDL.fire(actual)
+
     expected = np.array([[[[-1.0, 0.0], [-1.0, 1.0], [-1.0, -1.0]], [[-1.0, 2.0], [-1.0, 3.0], [-1.0, -1.0]]]])
     
     np.testing.assert_allclose(np.array(actual.data), expected)
@@ -88,7 +97,9 @@ def test_conv1d(pytest_configure):
             weights,
             stride=stride.item(),
             padding=padding.item()
-        ).fire()
+        )
+
+        seaDL.fire(my_output)
 
         my_output_torch = torch.from_numpy(np.array(my_output.data))
 
@@ -119,7 +130,9 @@ def test_conv2d(pytest_configure):
             weights,
             stride=stride,
             padding=padding
-        ).fire()
+        )
+
+        seaDL.fire(my_output)
 
         my_output_torch = torch.from_numpy(np.array(my_output.data))
 

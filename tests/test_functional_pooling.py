@@ -34,7 +34,9 @@ def test_maxpool2d(pytest_configure):
             kernel_size,
             stride=stride,
             padding=padding
-        ).fire()
+        )
+
+        seaDL.fire(my_output)
 
         my_output_torch = torch.from_numpy(np.array(my_output.data))
 

@@ -42,7 +42,10 @@ def test_nn_conv1d(pytest_configure):
             bias=pytest.use_bias
         )
 
-        my_output = my_conv(x).fire()
+        my_output = my_conv(x)
+
+        seaDL.fire(my_output)
+
         my_output_torch = torch.from_numpy(np.array(my_output.data))
 
         torch_output = F.conv1d(
@@ -91,7 +94,10 @@ def test_nn_conv2d(pytest_configure):
             bias=pytest.use_bias
         )
 
-        my_output = my_conv(x).fire()
+        my_output = my_conv(x)
+
+        seaDL.fire(my_output)
+
         my_output_torch = torch.from_numpy(np.array(my_output.data))
 
         torch_output = F.conv2d(

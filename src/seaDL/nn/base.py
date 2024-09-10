@@ -276,6 +276,18 @@ class Module:
             child.requires_grad_(requires_grad)
 
 
+    def zero_grad(self):
+        """
+        Recursively initialize gradient for all parameters in the Module
+        to zero
+        """
+        for param in self._parameters.values():
+            param.zero_grad()
+
+        for child in self.children():
+            child.zero_grad()
+
+
     def extra_repr(self):
         raise NotImplementedError
 
