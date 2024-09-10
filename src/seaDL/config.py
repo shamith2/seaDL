@@ -1,4 +1,9 @@
 # config
+import logging
+
+logging.basicConfig(format='%(levelname)s:[config] %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 class Config:
     def __init__(self):
@@ -6,7 +11,7 @@ class Config:
         self.set_backend('mlx')
 
         # default device
-        self.set_device('cpu')
+        self.set_device('gpu')
 
 
     def set_backend(
@@ -46,6 +51,11 @@ class Config:
             if device_type not in ['cpu', 'gpu']:
                 raise ValueError("backend '{}' only supports: cpu, gpu".format(self.backend))
 
+            device = self.backend.Device(self.get_device(device_type))
+            self.backend.set_default_device(device)
+
+            logging.info('using mlx with default device: {}\n'.format(device))
+
         elif self.backend_library == 'numpy':
             if device_type not in ['cpu']:
                 raise ValueError("backend '{}' only supports: cpu".format(self.backend_library))
@@ -57,14 +67,8 @@ class Config:
             self,
             device_type: str
     ):
-        self.set_device(device_type)
-
-        if self.backend == 'mlx':
-            if self.device_type == 'cpu':
-                return self.backend.cpu
-
-            else:
-                return self.backend.gpu
+        if self.backend_library == 'mlx':
+            return self.backend.gpu if device_type == 'gpu' else self.backend.cpu
 
         else:
             return None

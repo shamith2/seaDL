@@ -15,6 +15,11 @@ from ..base import Tensor, fire, zeros_like
 
 from graphviz import Digraph
 
+import logging
+
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 @jaxtyped(typechecker=typechecker)
 def _pair_value(
@@ -206,8 +211,8 @@ def gradient_check(
 
     relative_error = difference_norm / gradient_norm
 
-    print("[gradient check] difference error: {}, gradient norm: {}, relative error: {}"
-          .format(difference_norm, gradient_norm, relative_error))
+    logging.debug("[gradient check] difference error: {}, gradient norm: {}, relative error: {}\n"
+                  .format(difference_norm, gradient_norm, relative_error))
 
     return relative_error < error_tolerance
 
