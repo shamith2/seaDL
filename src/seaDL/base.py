@@ -143,7 +143,6 @@ class Tensor:
         """
         if self.numel() == 0:
             result = self.operation.fire()
-
             self.__dict__.update(result.__dict__)
 
         self.data[indices] = value.data if isinstance(value, Tensor) else value
@@ -241,7 +240,7 @@ class Tensor:
         if isinstance(other, Tensor):
             node = Operation(
                 name='add',
-                operation=lambda x, y: config.backend.add(x, y),
+                operation=lambda x, y: config.backend_op('add', x, y),
                 inputs=(self, other),
                 grad_fn=lambda gradient, *inputs: (gradient, gradient)
             )
@@ -257,7 +256,7 @@ class Tensor:
         else:
             node = Operation(
                 name='add',
-                operation=lambda x: config.backend.add(x, other),
+                operation=lambda x: config.backend_op('add', x, other),
                 inputs=(self,),
                 grad_fn=lambda gradient, *inputs: (gradient,)
             )
@@ -288,7 +287,7 @@ class Tensor:
         if isinstance(other, Tensor):
             node = Operation(
                 name='subtract',
-                operation=lambda x, y: config.backend.subtract(x, y),
+                operation=lambda x, y: config.backend_op('subtract', x, y),
                 inputs=(self, other),
                 grad_fn=lambda gradient, *inputs: (gradient, config.backend.negative(gradient))
             )
@@ -304,7 +303,7 @@ class Tensor:
         else:
             node = Operation(
                 name='subtract',
-                operation=lambda x: config.backend.subtract(x, other),
+                operation=lambda x: config.backend_op('subtract', x, other),
                 inputs=(self,),
                 grad_fn=lambda gradient, *inputs: (gradient,)
             )
@@ -336,10 +335,10 @@ class Tensor:
         if isinstance(other, Tensor):
             node = Operation(
                 name='multiply',
-                operation=lambda x, y: config.backend.multiply(x, y),
+                operation=lambda x, y: config.backend_op('multiply', x, y),
                 inputs=(self, other),
-                grad_fn=lambda gradient, *inputs: (config.backend.multiply(gradient, inputs[1]),
-                                                   config.backend.multiply(gradient, inputs[0]))
+                grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', gradient, inputs[1]),
+                                                   config.backend_op('multiply', gradient, inputs[0]))
             )
 
             result = Tensor(
@@ -353,9 +352,9 @@ class Tensor:
         else:
             node = Operation(
                 name='multiply',
-                operation=lambda x : config.backend.multiply(x, other),
+                operation=lambda x : config.backend_op('multiply', x, other),
                 inputs=(self,),
-                grad_fn=lambda gradient, *inputs: (config.backend.multiply(gradient, inputs[1]),)
+                grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', gradient, inputs[1]),)
             )
 
             result = Tensor(
@@ -387,10 +386,10 @@ class Tensor:
         if isinstance(other, Tensor):
             node = Operation(
                 name='divide',
-                operation=lambda x, y: config.backend.divide(x, y),
+                operation=lambda x, y: config.backend_op('divide', x, y),
                 inputs=(self, other),
-                grad_fn=lambda gradient, *inputs: (config.backend.divide(gradient, inputs[1]),
-                                                   config.backend.multiply(config.backend.negative(gradient), config.backend.divide(inputs[0], config.backend.power(inputs[1], 2))))
+                grad_fn=lambda gradient, *inputs: (config.backend_op('divide', gradient, inputs[1]),
+                                                   config.backend_op('multiply', config.backend_op('negative', gradient), config.backend_op('divide', inputs[0], config.backend_op('power', inputs[1], 2))))
             )
 
             result = Tensor(
@@ -404,9 +403,9 @@ class Tensor:
         else:
             node = Operation(
                 name='divide',
-                operation=lambda x : config.backend.divide(x, other),
+                operation=lambda x : config.backend_op('divide', x, other),
                 inputs=(self,),
-                grad_fn=lambda gradient, *inputs: (config.backend.divide(gradient, inputs[1]),)
+                grad_fn=lambda gradient, *inputs: (config.backend_op('divide', gradient, inputs[1]),)
             )
 
             result = Tensor(
@@ -432,9 +431,9 @@ class Tensor:
         """
         node = Operation(
             name='negative',
-            operation=lambda x : config.backend.negative(x),
+            operation=lambda x : config.backend_op('negative', x),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: (config.backend.negative(gradient),)
+            grad_fn=lambda gradient, *inputs: (config.backend_op('negative', gradient),)
         )
 
         result = Tensor(
@@ -460,9 +459,9 @@ class Tensor:
         """
         node = Operation(
             name='exp',
-            operation=lambda x: config.backend.exp(x),
+            operation=lambda x: config.backend_op('exp', x),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: (config.backend.multiply(gradient, config.backend.exp(inputs[0])),)
+            grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', gradient, config.backend_op('exp', inputs[0])),)
         )
 
         result = Tensor(
@@ -494,10 +493,10 @@ class Tensor:
         if isinstance(other, Tensor):
             node = Operation(
                 name='power',
-                operation=lambda x, y: config.backend.power(x, y),
+                operation=lambda x, y: config.backend_op('power', x, y),
                 inputs=(self, other),
-                grad_fn=lambda gradient, *inputs: (config.backend.multiply(gradient, config.backend.multiply(inputs[1], config.backend.power(inputs[0], config.backend.subtract(inputs[1], 1)))),
-                                                   config.backend.multiply(gradient, config.backend.multiply(config.backend.power(inputs[0], inputs[1]), config.backend.log(inputs[0]))))
+                grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', gradient, config.backend_op('multiply', inputs[1], config.backend_op('power', inputs[0], config.backend_op('subtract', inputs[1], 1)))),
+                                                   config.backend_op('multiply', gradient, config.backend_op('multiply', config.backend_op('power', inputs[0], inputs[1]), config.backend_op('log', inputs[0]))))
             )
 
             result = Tensor(
@@ -511,9 +510,9 @@ class Tensor:
         else:
             node = Operation(
                 name='power',
-                operation=lambda x: config.backend.power(x, other),
+                operation=lambda x: config.backend_op('power', x, other),
                 inputs=(self,),
-                grad_fn=lambda gradient, *inputs: (config.backend.multiply(gradient, config.backend.multiply(inputs[1], config.backend.power(inputs[0], config.backend.subtract(inputs[1], 1)))),)
+                grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', gradient, config.backend_op('multiply', inputs[1], config.backend_op('power', inputs[0], config.backend_op('subtract', inputs[1], 1)))),)
             )
 
             result = Tensor(
@@ -608,10 +607,10 @@ class Tensor:
     ):
         node = Operation(
             name='mean',
-            operation=lambda x: config.backend.mean(x, axis=dim, keepdims=keepdim),
+            operation=lambda x: config.backend_op('mean', x, axis=dim, keepdims=keepdim),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: (config.backend.multiply(config.backend.expand_dims(gradient, axis=dim),
-                                                                       config.backend.divide(config.backend.ones_like(inputs[0]), prod(tuple(self.shape[d] for d in dim)))),)
+            grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', config.backend_op('expand_dims', gradient, axis=dim),
+                                                                 config.backend_op('divide', config.backend_op('ones_like', inputs[0]), prod(tuple(self.shape[d] for d in dim)))),)
         )
 
         result = Tensor(
@@ -631,22 +630,22 @@ class Tensor:
     ):
         def _grad_fn(gradient, *inputs):
             data = inputs[0]
-            input_gradient = config.backend.zeros_like(data)
+            input_gradient = config.backend_op('zeros_like', data)
 
-            max_values = config.backend.max(data, axis=dim, keepdims=True)
+            max_values = config.backend_op('max', data, axis=dim, keepdims=True)
 
             # propogate the gradient only through the maximum values
             # of the result tensor
-            input_gradient = config.backend.where(config.backend.equal(data, max_values),
-                                                  config.backend.expand_dims(gradient, axis=dim),
-                                                  0)
+            input_gradient = config.backend_op('where', config.backend_op('equal', data, max_values),
+                                               config.backend_op('expand_dims', gradient, axis=dim),
+                                               0)
 
             return (input_gradient,)
 
 
         node = Operation(
             name='max',
-            operation=lambda x: config.backend.max(x, axis=dim, keepdims=keepdim),
+            operation=lambda x: config.backend_op('max', x, axis=dim, keepdims=keepdim),
             inputs=(self,),
             grad_fn=_grad_fn
         )
@@ -683,10 +682,10 @@ class Tensor:
 
         node = Operation(
             name='matmul',
-            operation=lambda x, y: config.backend.matmul(x, y),
+            operation=lambda x, y: config.backend_op('matmul', x, y),
             inputs=(self, other),
-            grad_fn=lambda gradient, *inputs: (config.backend.matmul(gradient, inputs[1].transpose()),
-                                               config.backend.matmul(inputs[0].transpose(), gradient))
+            grad_fn=lambda gradient, *inputs: (config.backend_op('matmul', gradient, config.backend_op('transpose', inputs[1])),
+                                               config.backend_op('matmul', config.backend_op('transpose', inputs[0]), gradient))
         )
 
         result = Tensor(
@@ -721,7 +720,6 @@ class Tensor:
             return (grad,)
 
         def _operation(x, y):
-            # x[indices] = y.astype(x.dtype)
             x[indices] = y
 
             return x
@@ -760,9 +758,9 @@ class Tensor:
         """
         node = Operation(
             name='transpose',
-            operation=lambda x: config.backend.transpose(x, dim),
+            operation=lambda x: config.backend_op('transpose', x, axes=dim),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: (config.backend.transpose(gradient, dim),)
+            grad_fn=lambda gradient, *inputs: (config.backend_op('transpose', gradient, axes=dim),)
         )
 
         result = Tensor(
@@ -791,9 +789,9 @@ class Tensor:
         """
         node = Operation(
             name='reshape',
-            operation=lambda x: config.backend.reshape(x, shape),
+            operation=lambda x: config.backend_op('reshape', x, shape),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: (config.backend.reshape(gradient, self.shape),)
+            grad_fn=lambda gradient, *inputs: (config.backend_op('reshape', gradient, self.shape),)
         )
 
         result = Tensor(
@@ -812,9 +810,9 @@ class Tensor:
     ):
         node = Operation(
             name='squeeze',
-            operation=lambda x: config.backend.squeeze(x, axis=dim),
+            operation=lambda x: config.backend_op('squeeze', x, axis=dim),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: config.backend.expand_dims(gradient, axis=dim)
+            grad_fn=lambda gradient, *inputs: config.backend_op('expand_dims', gradient, axis=dim)
         )
 
         result = Tensor(
@@ -833,9 +831,9 @@ class Tensor:
     ):
         node = Operation(
             name='unsqueeze',
-            operation=lambda x: config.backend.expand_dims(x, axis=dim),
+            operation=lambda x: config.backend_op('expand_dims', x, axis=dim),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: config.backend.squeeze(gradient, axis=dim)
+            grad_fn=lambda gradient, *inputs: config.backend_op('squeeze', gradient, axis=dim)
         )
 
         result = Tensor(
@@ -855,14 +853,14 @@ class Tensor:
     ):
         def _grad_fn(gradient, *inputs):
             input_split_size = tuple(node_input.shape[dim] for node_input in inputs)
-            input_split_size = tuple(config.backend.cumsum(config.Array(input_split_size[:-1])).tolist())
+            input_split_size = tuple(config.backend_op('cumsum', config.Array(input_split_size[:-1])).tolist())
 
-            return tuple(config.backend.split(gradient, input_split_size, axis=dim))
+            return tuple(config.backend_op('split', gradient, indices_or_sections=input_split_size, axis=dim))
 
 
         node = Operation(
             name='cat',
-            operation=lambda *inputs: config.backend.concatenate(inputs, axis=dim),
+            operation=lambda *inputs: config.backend_op('concatenate', inputs, axis=dim),
             inputs=(self,) + tensors,
             grad_fn=_grad_fn
         )
@@ -884,9 +882,9 @@ class Tensor:
     ):
         node = Operation(
             name='split',
-            operation=lambda x: config.backend.split(x, split_size_or_sections, axis=dim),
+            operation=lambda x: config.backend_op('split', x, indices_or_sections=split_size_or_sections, axis=dim),
             inputs=(self,),
-            grad_fn=lambda gradient, *inputs: config.backend.concatenate(gradient, axis=dim)
+            grad_fn=lambda gradient, *inputs: config.backend_op('concatenate', gradient, axis=dim)
         )
 
         result = ()
@@ -948,10 +946,10 @@ class Tensor:
         if isinstance(other, Tensor):
             node = Operation(
                 name='maximum',
-                operation=lambda x, y: config.backend.maximum(x, y),
+                operation=lambda x, y: config.backend_op('maximum', x, y),
                 inputs=(self, other),
-                grad_fn=lambda gradient, *inputs: (config.backend.multiply(gradient, config.backend.sign(config.backend.maximum(config.backend.subtract(inputs[0], inputs[1]), 0))),
-                                                   config.backend.multiply(gradient, config.backend.sign(config.backend.maximum(config.backend.subtract(inputs[1], inputs[0]), 0))))
+                grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', gradient, config.backend_op('sign', config.backend_op('maximum', config.backend_op('subtract', inputs[0], inputs[1]), 0))),
+                                                   config.backend_op('multiply', gradient, config.backend_op('sign', config.backend_op('maximum', config.backend_op('subtract', inputs[1], inputs[0]), 0))))
             )
 
             result = Tensor(
@@ -964,9 +962,9 @@ class Tensor:
         else:
             node = Operation(
                 name='maximum',
-                operation=lambda x: config.backend.maximum(x, other),
+                operation=lambda x: config.backend_op('maximum', x, other),
                 inputs=(self,),
-                grad_fn=lambda gradient, *inputs: (config.backend.multiply(gradient, config.backend.sign(config.backend.maximum(config.backend.subtract(inputs[0], other), 0))),)
+                grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', gradient, config.backend_op('sign', config.backend_op('maximum', config.backend_op('subtract', inputs[0], other), 0))),)
             )
 
             result = Tensor(
@@ -1021,13 +1019,13 @@ class Tensor:
                     # if the input tensor had been reduced over its axes,
                     # expand and broadcast the gradient to get back the original shape
                     expanded_shape = gradient_shape + shape
-                    gradient = config.backend.broadcast_to(config.backend.expand_dims(gradient, axis=tuple(range(len(gradient_shape), len(expanded_shape)))), expanded_shape)
+                    gradient = config.backend_op('broadcast_to', config.backend_op('expand_dims', gradient, axis=tuple(range(len(gradient_shape), len(expanded_shape)))), expanded_shape)
 
                 reordered_subscripts = _reorder_subscripts(ordered_subscripts, output_subscript, i)
 
                 # reverse the einsum computation on the incoming gradient
                 # to get the local gradients
-                gradients += (config.backend.einsum(reordered_subscripts, gradient, *(_input for j, _input in enumerate(inputs) if j != i)),)
+                gradients += (config.backend_op('einsum', reordered_subscripts, gradient, *(_input for j, _input in enumerate(inputs) if j != i)),)
 
             return gradients
 
@@ -1037,7 +1035,7 @@ class Tensor:
 
         node = Operation(
             name='einsum',
-            operation=lambda *tensors: config.backend.einsum(subscripts, *tensors),
+            operation=lambda *tensors: config.backend_op('einsum', subscripts, *tensors),
             inputs=(self,) + tensors,
             grad_fn=_grad_fn
         )
@@ -1077,7 +1075,7 @@ class Tensor:
 
         # accumulate gradient at the current node: chain rule
         # inplace += is not used to avoid broadcasting error
-        self.grad: ArrayType = config.backend.add(self.grad, gradient) # implicit broadcasting
+        self.grad: ArrayType = config.backend_op('add', self.grad, gradient) # implicit broadcasting
 
         if self.operation is not None:
             self.operation.backward(copy.deepcopy(self.grad))
@@ -1111,8 +1109,8 @@ class Operation:
             inputs: tuple,
             grad_fn: Any = None
     ):
-        # value of node
-        self.value: Union[tuple, list, ArrayType] = config.Array(())
+        # value of node for caching
+        self.value: Union[None, tuple, list, ArrayType] = None
 
         # operation fn
         self.operation = operation
@@ -1189,13 +1187,13 @@ def zeros_like(
 ):
     if isinstance(tensor, ArrayType):
         return Tensor(
-            data=config.backend.zeros_like(tensor),
+            data=config.backend_op('zeros_like', tensor),
             dtype=DataType(str(tensor.dtype))
         )
 
     else:
         return Tensor(
-            data=config.backend.zeros_like(tensor.data),
+            data=config.backend_op('zeros_like', tensor.data),
             dtype=tensor.data_type,
             requires_grad=tensor.requires_grad
         )
@@ -1207,13 +1205,13 @@ def ones_like(
 ):
     if isinstance(tensor, ArrayType):
         return Tensor(
-            data=config.backend.ones_like(tensor),
+            data=config.backend_op('ones_like', tensor),
             dtype=DataType(str(tensor.dtype))
         )
 
     else:
         return Tensor(
-            data=config.backend.ones_like(tensor.data),
+            data=config.backend_op('ones_like', tensor.data),
             dtype=tensor.data_type,
             requires_grad=tensor.requires_grad
         )
@@ -1226,7 +1224,7 @@ def full(
         dtype: Optional[DataType] = DataType('float32')
 ):
     return Tensor(
-        data=config.backend.full(shape, fill_value),
+        data=config.backend_op('full', shape, fill_value),
         dtype=dtype
     )
 
@@ -1246,7 +1244,9 @@ def fire(root: Tensor):
     operation = root.operation
 
     if operation is not None:
-        # update result
+        # update result: if operation was already fired,
+        # operation.fire() return the cached result stored
+        # in self.value
         result: Union[tuple, list, ArrayType] = operation.fire()
 
         if not isinstance(result, ArrayType):

@@ -1,4 +1,7 @@
 # config
+
+from typing import Optional
+import functools
 import logging
 
 logging.basicConfig(format='%(levelname)s:[config] %(message)s', level=logging.INFO)
@@ -51,10 +54,10 @@ class Config:
             if device_type not in ['cpu', 'gpu']:
                 raise ValueError("backend '{}' only supports: cpu, gpu".format(self.backend))
 
-            device = self.backend.Device(self.get_device(device_type))
-            self.backend.set_default_device(device)
+            self.default_device = self.get_device(device_type)
+            self.backend.set_default_device(self.default_device)
 
-            logging.info('using mlx with default device: {}\n'.format(device))
+            logging.info('using mlx with default device: {}\n'.format(self.default_device))
 
         elif self.backend_library == 'numpy':
             if device_type not in ['cpu']:
@@ -68,7 +71,7 @@ class Config:
             device_type: str
     ):
         if self.backend_library == 'mlx':
-            return self.backend.gpu if device_type == 'gpu' else self.backend.cpu
+            return self.backend.Device(self.backend.gpu) if device_type == 'gpu' else self.backend.Device(self.backend.cpu)
 
         else:
             return None
@@ -80,6 +83,28 @@ class Config:
 
     def is_backend_numpy(self):
         return self.backend_library == 'numpy'
+
+
+    def backend_op(
+            self,
+            name: str,
+            *inputs: tuple,
+            device: Optional[str] = None,
+            **kwargs: dict
+    ):
+        """
+        Wrapper to run backend library API
+        Using this wrapper, so that 'stream' parameter can be
+        overwritten, if needed, for MLX function calls
+        """
+        fn = getattr(self.backend, name)
+
+        if self.is_backend_mlx():
+            device = self.default_device if device is None else self.get_device(device)
+
+            fn = functools.partial(fn, stream=device)
+
+        return fn(*inputs, **kwargs)
 
 
 # global config instance
