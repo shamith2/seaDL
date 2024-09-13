@@ -2,7 +2,7 @@ from typing import Union, Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ..base import Tensor, Device
+from ..engine import Tensor, Device
 from .base import Module
 from .functional import maxpool2d, averagepool2d
 from ..utils import _pair_value

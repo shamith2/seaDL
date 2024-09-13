@@ -2,7 +2,7 @@ from typing import Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ..base import Tensor, Device
+from ..engine import Tensor, Device
 from .base import Module
 from .activation import ReLU
 from .linear import Linear, Flatten

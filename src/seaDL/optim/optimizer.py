@@ -1,22 +1,21 @@
-from typing import Optional
+from typing import Optional, Iterable
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ..base import Device, zeros_like
-from ..nn import Module
+from ..engine import zeros_like, no_grad
+from ..nn import Parameter
 
 
 @jaxtyped(typechecker=typechecker)
 class SGD:
     def __init__(
         self,
-        model: Module,
+        params: Iterable[Parameter],
         lr: float,
         momentum: float = 0.0,
         dampening: Optional[float] = 0.0,
         weight_decay: Optional[float] = 0.0,
-        nesterov: Optional[bool] = False,
-        device: Optional[Device] = None
+        nesterov: Optional[bool] = False
     ):
         '''
         Implements SGD with momentum
@@ -28,30 +27,7 @@ class SGD:
         if nesterov and (momentum <= 0 or dampening):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
 
-        train_params: dict = model.trainable_parameters()
-
-        parameters = []
-
-        for key, value in train_params.items():
-            if isinstance(value, (list, tuple)):
-                print(value[0], len(value[0]))
-        vv
-        for name, module in model.named_modules():
-            print(name, module)
-            print(train_params.get(name))
-            cc
-        
-        cc
-
-        # if value is a list, key is a list of layers
-        if isinstance(value, (list, tuple)):
-            for v in value:
-                print(type(v), list(v.keys()))
-                cc
-
-        cc
-
-        # turn params into a list because it might be a generator
+        # turn params into a list (because it might be a generator)
         self.params = list(params)
 
         self.lr = lr
@@ -64,18 +40,16 @@ class SGD:
         # set number of steps to zero initially
         self.t = 0
 
-        # set gradients for paramters to zero initially
-        self.gs = [zeros_like(p) for p in self.params]
+        # model parameter gradients
+        self.gs = [zeros_like(param) for param in self.params]
 
 
-    def zero_grad(self) -> None:
-        '''
-        Zeros all gradients of the parameters in `self.params`
-        '''
+    def zero_grad(self):
         for param in self.params:
-            param.grad = zeros_like(param).data
+            param.zero_grad()
 
 
+    @no_grad()
     def step(self) -> None:
         '''
         Performs a single optimization step of the SGD algorithm
@@ -92,24 +66,26 @@ class SGD:
 
             # if weight decay != 0
             if self.lmda:
-                g_t += self.lmda * p
+                g_t += (p * self.lmda)
 
             # if momentum != 0
             if self.mu:
                 if self.t > 0:
-                    b_t = self.mu * g + (1 - self.tau) * g_t
+                    b_t = g * self.mu + g_t * (1 - self.tau)
 
                 else:
                     b_t = g_t
 
                 if self.nesterov:
-                    g_t += self.mu * b_t
+                    g_t += (b_t * self.mu)
 
                 else:
                     g_t = b_t
 
             # update parameters
-            self.params[i] -= self.lr * g_t
+            # needs to be in-place since the model
+            # parameters need to be directly updated
+            self.params[i] -= g_t * self.lr
 
             # store updated gradients
             self.gs[i] = g_t

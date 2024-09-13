@@ -24,7 +24,7 @@ class SimpleNet(nn.Module):
         self.relu = nn.ReLU()
     
     def __call__(self, x):
-        out = self.linear(x, subscripts="bi,oi->bo")
+        out = self.linear(x)
         y = self.relu(out)
 
         return y
@@ -50,6 +50,7 @@ def test_parameter(pytest_configure):
 
     result_pow_1 = param1 ** 2
     result_pow_2 = param1 ** param2
+    result_pow_3 = param1.exp()
 
     seaDL.fire(result_neg_1)
 
@@ -70,6 +71,7 @@ def test_parameter(pytest_configure):
 
     seaDL.fire(result_pow_1)
     seaDL.fire(result_pow_2)
+    seaDL.fire(result_pow_3)
 
     np.testing.assert_allclose(np.array(result_neg_1.data), np.array([-1.0, 2.0, -3.0]))   
 
@@ -87,6 +89,7 @@ def test_parameter(pytest_configure):
 
     np.testing.assert_allclose(np.array(result_pow_1.data), np.array([1.0, 4.0, 9.0]))
     np.testing.assert_allclose(np.array(result_pow_2.data), np.array([1.0, -32.0, 729.0]))
+    np.testing.assert_allclose(np.array(result_pow_3.data), np.exp(np.array(param1.data)), rtol=1e-6)
 
 
 def test_module(pytest_configure):
@@ -226,7 +229,7 @@ def test_auto_diff_3(pytest_configure):
 
     np.testing.assert_allclose(np.array(s_actual_a.data), np.array(expected_a))
 
-    s_actual_a.operation.backward((seaDL.ones_like(s_actual_a).data, seaDL.zeros_like(s_actual_a).data))
+    s_actual_a.operation.backward((seaDL.ones_like(s_actual_a, requires_grad=False), seaDL.zeros_like(s_actual_a, requires_grad=False)))
 
     assert gradient_check(s_actual_a, w, h=1e-6, error_tolerance=0.03)
 

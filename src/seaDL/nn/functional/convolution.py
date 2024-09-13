@@ -2,7 +2,7 @@ from typing import Union, Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ...base import Tensor, Device, full
+from ...engine import Tensor, Device, full
 from ...nn.base import Parameter
 from ...utils import _pair_value
 

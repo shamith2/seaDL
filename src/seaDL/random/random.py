@@ -5,7 +5,7 @@ from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
 from ..config import config
-from ..base import Tensor, DataType
+from ..engine import Tensor, DataType
 
 
 # @jaxtyped(typechecker=typechecker)

@@ -4,7 +4,7 @@ from typeguard import typechecked as typechecker
 
 import math
 
-from ..base import Tensor, DataType, Device
+from ..engine import Tensor, DataType, Device
 from ..random import uniform
 from .base import Module, Parameter
 from .functional import conv1d, conv2d

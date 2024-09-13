@@ -4,10 +4,10 @@ from typeguard import typechecked as typechecker
 
 import math
 
-from ..base import Tensor, Device, DataType
+from ..engine import Tensor, Device, DataType
 from .base import Parameter, Module
 from ..random import uniform
-from ..base import prod
+from ..engine import prod
 
 
 @jaxtyped(typechecker=typechecker)
@@ -55,24 +55,13 @@ class Linear(Module):
 
     def __call__(
             self,
-            x: Tensor,
-            subscripts: Optional[str] = ''
+            x: Tensor
     ) -> Tensor:
         '''
         x: shape (*, in_features)
         Return: shape (*, out_features)
         '''
-        # need to get input for einsum notation subscript
-        # since "..." does work with mlx.core.einsum,
-        # atleast not like numpy.einsum
-        if subscripts:
-            y = x.einsum(
-                subscripts,
-                self.weight
-            )
-
-        else:
-            y = x.matmul(self.weight.transpose())
+        y = x.matmul(self.weight.transpose())
 
         if self.bias is not None:
             y = y + self.bias

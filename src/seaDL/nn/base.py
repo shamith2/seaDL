@@ -5,7 +5,7 @@ from typeguard import typechecked as typechecker
 from collections import OrderedDict
 
 from ..config import config, ArrayType
-from ..base import Tensor, zeros_like
+from ..engine import Tensor, zeros_like
 
 
 @jaxtyped(typechecker=typechecker)
@@ -25,12 +25,10 @@ class Parameter(Tensor):
         )
 
 
-    def zero_grad(self):
-        """
-        Initialize gradient for Parameter to zero
-        """
-        if self.requires_grad:
-            self.grad = zeros_like(self.detach()).data
+    def sprint(self):
+        return "Parameter(data: {}, shape: {}, dtype: {}, grad: {}, requires_grad: {})".format(
+            self.data, self.data.shape, self.data_type.value_as_str, self.grad, self.requires_grad
+        )
 
 
     def __repr__(self):
@@ -77,23 +75,19 @@ class Module:
     def __setattr__(
             self,
             name: str,
-            value: Union[Self, Tensor]
+            value: Union[Self, Parameter]
     ):
         """
         Implictly add Tensor or Module to the dict of parameters or submodules
         without explictly calling self.add_modules or self.register_paramater
         """
-        if isinstance(value, Tensor):
-            self._parameters[name] = value
+        super().__setattr__(name, value)
 
-            value.requires_grad = True
-
-            self._trainable_parameters[name] = value
+        if isinstance(value, Parameter):
+            self.register_parameter(name, value)
 
         elif isinstance(value, Module):
-            self._modules[name] = value
-
-        super().__setattr__(name, value)
+            self.add_module(name, value)
 
 
     def state_dict(self):
@@ -123,21 +117,18 @@ class Module:
         self._modules[name] = module
 
 
-    def register_paramater(
+    def register_parameter(
             self,
             name: str,
-            value: Tensor
+            value: Parameter
     ):
         """
         Register parameters for Module
         """
-        self._parameters[name] = value
-
         value.requires_grad = True
 
+        self._parameters[name] = value
         self._trainable_parameters[name] = value
-
-        setattr(self, name, value)
 
 
     def register_buffer(
@@ -179,7 +170,7 @@ class Module:
 
         # recursively yield parameters from all submodules
         for module in self._modules.values():
-            yield from module.paramters()
+            yield from module.parameters()
 
 
     def trainable_parameters(self):
@@ -187,8 +178,8 @@ class Module:
         Generator: all parameter of Module
         """
         # yield parameters from current module
-        for name, parameter in self._trainable_parameters.values():
-            yield (name, parameter)
+        for parameter in self._trainable_parameters.values():
+            yield parameter
 
         # recursively yield parameters from all submodules
         for module in self._modules.values():
@@ -208,6 +199,19 @@ class Module:
         # recursively yield parameters from all submodules
         for module in self._modules.values():
             yield from module.named_parameters()
+
+
+    def named_trainable_parameters(self):
+        """
+        Generator: all parameter of Module
+        """
+        # yield parameters from current module
+        for name, parameter in self._trainable_parameters.items():
+            yield (name, parameter)
+
+        # recursively yield parameters from all submodules
+        for module in self._modules.values():
+            yield from module.named_trainable_parameters()
 
 
     def named_buffers(self):
@@ -281,7 +285,7 @@ class Module:
         Recursively initialize gradient for all parameters in the Module
         to zero
         """
-        for param in self._parameters.values():
+        for param in self._trainable_parameters.values():
             param.zero_grad()
 
         for child in self.children():

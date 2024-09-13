@@ -47,7 +47,7 @@ def test_nn_linear(pytest_configure):
     einsum_linear.weight = nn.Parameter(seaDL.Tensor(np.array(torch_linear.weight.detach().clone())))
     einsum_linear.bias = nn.Parameter(seaDL.Tensor(np.array(torch_linear.bias.detach().clone())))
 
-    actual = linear(x, subscripts="bci,oi->bco")
+    actual = linear(x)
 
     seaDL.fire(actual)
 

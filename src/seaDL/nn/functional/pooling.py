@@ -3,7 +3,7 @@ from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
 from ...config import config
-from ...base import Tensor, Device
+from ...engine import Tensor, Device
 from .convolution import pad2d
 from ...utils import _pair_value
 

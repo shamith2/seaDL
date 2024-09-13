@@ -5,7 +5,7 @@ from typeguard import typechecked as typechecker
 from einops.array_api import rearrange
 import mlx.core as mx
 
-from ..base import Tensor, Device
+from ..engine import Tensor, Device
 from .base import Module, Parameter
 
 

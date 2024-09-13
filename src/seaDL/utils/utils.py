@@ -1,4 +1,4 @@
-from typing import Union, Optional, NamedTuple
+from typing import Union, Optional, Iterable, NamedTuple
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
@@ -6,12 +6,9 @@ import copy
 from collections import namedtuple
 import itertools
 import random
-import numpy as np
-import torch
-import mlx.core as mx
 
 from ..config import config, ArrayType
-from ..base import Tensor, fire, zeros_like
+from ..engine import Tensor, fire, zeros_like
 
 from graphviz import Digraph
 
@@ -93,7 +90,7 @@ def visualize_graph(
     graph = Digraph(format=format, graph_attr={'rankdir': direction})
 
     for node in nodes:
-        graph.node(name=str(id(node)), label=str(node), shape='record')
+        graph.node(name=str(id(node)), label=node.sprint(), shape='record')
 
     for n1, n2 in dataflow:
         graph.edge(str(id(n1)), str(id(n2)))
@@ -163,7 +160,7 @@ def gradient_check(
         raise ValueError("requires_grad for reference_tensor is False")
 
     analytical_gradient = copy.deepcopy(reference_tensor.grad)
-    numerical_gradient = zeros_like(reference_tensor.data).data
+    numerical_gradient = zeros_like(reference_tensor, requires_grad=False)
 
     shape = reference_tensor.data.shape
 
@@ -205,9 +202,9 @@ def gradient_check(
     if strict:
         assert analytical_gradient.shape == numerical_gradient.shape, "[gradient check] shape of analytical and numerical gradient are not equal"
 
-    difference_norm = config.backend.linalg.norm(config.backend.subtract(analytical_gradient, numerical_gradient))
+    difference_norm = config.backend.linalg.norm((analytical_gradient - numerical_gradient).data)
 
-    gradient_norm = config.backend.add(config.backend.linalg.norm(analytical_gradient), config.backend.linalg.norm(numerical_gradient))
+    gradient_norm = config.backend.add(config.backend.linalg.norm(analytical_gradient.data), config.backend.linalg.norm(numerical_gradient.data))
 
     relative_error = difference_norm / gradient_norm
 
@@ -219,28 +216,16 @@ def gradient_check(
 
 @jaxtyped(typechecker=typechecker)
 def convert_and_shuffle_dataset(
-        X: Union[np.ndarray, torch.Tensor, mx.array],
-        y: Union[np.ndarray, torch.Tensor, mx.array],
+        X: Iterable,
+        y: Iterable,
         shuffle: bool,
         seed: Optional[int] = None
 ) -> tuple[tuple, tuple]:
-    if isinstance(X, torch.Tensor):
-        X = mx.array(X.detach().numpy())
+    if not isinstance(X, ArrayType):
+        X = config.Array(X)
 
-    elif isinstance(X, np.ndarray):
-        X = mx.array(X)
-
-    else:
-        pass
-
-    if isinstance(y, torch.Tensor):
-        y = mx.array(y.detach().numpy())
-
-    elif isinstance(X, np.ndarray):
-        y = mx.array(y)
-
-    else:
-        pass
+    if not isinstance(y, ArrayType):
+        y = config.Array(y)
 
     dataset = list(zip(X, y))
 
@@ -255,8 +240,8 @@ def convert_and_shuffle_dataset(
 
 @jaxtyped(typechecker=typechecker)
 def train_test_split(
-        X: Union[np.ndarray, torch.Tensor, mx.array],
-        y: Union[np.ndarray, torch.Tensor, mx.array],
+        X: Iterable,
+        y: Iterable,
         train_val_split: Union[tuple, float],
         shuffle: bool,
         seed: Optional[int] = None
@@ -265,7 +250,7 @@ def train_test_split(
     if isinstance(train_val_split, (tuple, list)) and len(train_val_split) != 2:
         raise ValueError("size of train_val_split should be 2 if train_val_split is a tuple")
 
-    if isinstance(train_val_split, float):
+    if isinstance(train_val_split, (int, float)):
         do_validation_split = False
 
         training_split = train_val_split
@@ -307,7 +292,17 @@ def train_test_split(
     else:
         X_test, y_test = X[train_split_idx:], y[train_split_idx:]
 
+    # convert the list of Arrays to a single Array
+    X_train = Tensor(config.backend_op('stack', X_train, axis=0), requires_grad=False)
+    y_train = Tensor(config.backend_op('stack', y_train, axis=0), requires_grad=False)
+
+    X_test = Tensor(config.backend_op('stack', X_test, axis=0), requires_grad=False)
+    y_test = Tensor(config.backend_op('stack', y_test, axis=0), requires_grad=False)
+
     if do_validation_split:
+        X_validation = Tensor(config.backend_op('stack', X_validation, axis=0), requires_grad=False)
+        y_validation = Tensor(config.backend_op('stack', y_validation, axis=0), requires_grad=False)
+
         dataSplit = namedtuple("dataSplit",
                                "X_train y_train X_validation y_validation X_test y_test")
 
@@ -326,47 +321,34 @@ def train_test_split(
 class DataLoader:
     def __init__(
             self,
-            X: Union[tuple, np.ndarray, torch.Tensor, mx.array],
-            y: Union[tuple, np.ndarray, torch.Tensor, mx.array],
+            X: Iterable,
+            y: Iterable,
             batch_size: int,
             shuffle: bool,
-            seed: Optional[int] = None,
-            device: Optional[mx.DeviceType] = None
+            seed: Optional[int] = None
     ):
-        self.device = mx.cpu if not device else device
         self.seed = seed
 
         self.batch_size = batch_size
         self.shuffle = shuffle
 
-        self.X, self.y = X, y
-
-        # could be a tuple, numpy array or numpy scalar
-        if isinstance(self.X, (tuple, list)) or type(self.X).__module__ == np.__name__:
-            self.X = mx.array(self.X)
-
-        # could be a tuple, numpy array or numpy scalar
-        if isinstance(self.y, (tuple, list)) or type(self.y).__module__ == np.__name__:
-            self.y = mx.array(self.y)
-
-        self._convert_and_shuffle_dataset()
+        self.X, self.y = convert_and_shuffle_dataset(
+            X,
+            y,
+            self.shuffle,
+            self.seed
+        )
 
         self.dataset_size = len(self.y) # len(self.x) can also be used
         self.mini_batch_dataset_size = self.dataset_size // self.batch_size
 
-    def _convert_and_shuffle_dataset(self):
-        self.X, self.y = convert_and_shuffle_dataset(
-                self.X,
-                self.y,
-                self.shuffle,
-                self.seed
-        )
 
     def __len__(self):
         return self.mini_batch_dataset_size
 
+
     def __iter__(self):
         for batch_idx in range(0, self.dataset_size, self.batch_size):
-            yield (mx.stack(self.X[batch_idx:(batch_idx + self.batch_size)], axis=0, stream=self.device),
-                   mx.stack(self.y[batch_idx:(batch_idx + self.batch_size)], axis=0, stream=self.device))
+            yield (Tensor(config.backend_op('stack', self.X[batch_idx:(batch_idx + self.batch_size)], axis=0), requires_grad=False),
+                   Tensor(config.backend_op('stack', self.y[batch_idx:(batch_idx + self.batch_size)], axis=0), requires_grad=False))
 
