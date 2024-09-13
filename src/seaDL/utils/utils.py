@@ -7,8 +7,8 @@ from collections import namedtuple
 import itertools
 import random
 
-from ..config import config, ArrayType
-from ..engine import Tensor, fire, zeros_like
+from seaDL import config, ArrayType
+from seaDL import Tensor, fire, zeros_like
 
 from graphviz import Digraph
 

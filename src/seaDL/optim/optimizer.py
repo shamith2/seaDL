@@ -2,8 +2,8 @@ from typing import Optional, Iterable
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ..engine import zeros_like, no_grad
-from ..nn import Parameter
+from seaDL import zeros_like, no_grad
+from seaDL.nn import Parameter
 
 
 @jaxtyped(typechecker=typechecker)

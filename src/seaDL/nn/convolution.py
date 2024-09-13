@@ -4,11 +4,12 @@ from typeguard import typechecked as typechecker
 
 import math
 
-from ..engine import Tensor, DataType, Device
-from ..random import uniform
+from seaDL import Tensor, DataType, Device
+from seaDL.random import uniform
+from seaDL.nn.functional import conv1d, conv2d
+from seaDL.utils import _pair_value
+
 from .base import Module, Parameter
-from .functional import conv1d, conv2d
-from ..utils import _pair_value
 
 
 @jaxtyped(typechecker=typechecker)

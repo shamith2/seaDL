@@ -2,10 +2,11 @@ from typing import Union, Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ..engine import Tensor, Device
+from seaDL import Tensor, Device
+from seaDL.nn.functional import maxpool2d, averagepool2d
+from seaDL.utils import _pair_value
+
 from .base import Module
-from .functional import maxpool2d, averagepool2d
-from ..utils import _pair_value
 
 
 @jaxtyped(typechecker=typechecker)

@@ -4,10 +4,10 @@ from typeguard import typechecked as typechecker
 
 import math
 
-from ..engine import Tensor, Device, DataType
+from seaDL import Tensor, Device, DataType, prod
+from seaDL.random import uniform
+
 from .base import Parameter, Module
-from ..random import uniform
-from ..engine import prod
 
 
 @jaxtyped(typechecker=typechecker)

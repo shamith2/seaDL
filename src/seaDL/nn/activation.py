@@ -2,9 +2,10 @@ from typing import Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ..engine import Tensor, Device
+from seaDL import Tensor, Device
+from seaDL.nn.functional import relu, softmax, log_softmax
+
 from .base import Module
-from .functional import relu, softmax, log_softmax
 
 
 @jaxtyped(typechecker=typechecker)
@@ -34,7 +35,7 @@ class ReLU(Module):
 class Softmax(Module):
     def __init__(
             self,
-            dim: int = -1,
+            dim: Optional[int] = None,
             device: Optional[Device] = None
     ):
         super().__init__()
@@ -60,7 +61,7 @@ class Softmax(Module):
 class LogSoftmax(Module):
     def __init__(
             self,
-            dim: int = -1,
+            dim: Optional[int] = None,
             device: Optional[Device] = None
     ):
         super().__init__()

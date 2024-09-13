@@ -5,8 +5,9 @@ from typeguard import typechecked as typechecker
 from einops.array_api import rearrange
 import mlx.core as mx
 
-from ..engine import Tensor, Device
-from .base import Module, Parameter
+from seaDL import Tensor, Device
+
+from .base import Parameter, Module
 
 
 @jaxtyped(typechecker=typechecker)

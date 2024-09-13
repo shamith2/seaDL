@@ -5,55 +5,10 @@ from typeguard import typechecked as typechecker
 import copy
 import collections
 import functools
-from contextlib import contextmanager
 import math
 
 from .config import config, ArrayType
-
-
-class GradientConfig:
-    # global flag to setup computational graph
-    # and compute gradients 
-    enable_grad: bool = True
-
-
-@contextmanager
-def no_grad():
-    try:
-        GradientConfig.enable_grad = False
-        yield
-
-    finally:
-        GradientConfig.enable_grad = True
-
-
-@jaxtyped(typechecker=typechecker)
-class Device:
-    def __init__(
-            self,
-            device: str
-    ):
-        self.value = config.get_device(device)
-
-
-@jaxtyped(typechecker=typechecker)
-class DataType:
-    def __init__(
-            self,
-            dtype: str = 'float32'
-    ):
-        self.value_as_str = dtype
-
-        # to accomodate for dtype strings
-        # like "mlx.core.float32"
-        if 'float32' in dtype.lower():
-            self.value = config.backend.float32
-
-        elif 'float16' in dtype.lower():
-            self.value = config.backend.float16
-
-        else:
-            raise ValueError("dtype is not a valid datatype or is not supported")
+from .base import DataType, GradientConfig, prod
 
 
 @jaxtyped(typechecker=typechecker)
@@ -1690,13 +1645,6 @@ def full(
         dtype=dtype,
         requires_grad=requires_grad
     )
-
-
-@jaxtyped(typechecker=typechecker)
-def prod(
-    array: Union[tuple, list]
-): 
-    return functools.reduce((lambda x, y: x * y), array)
 
 
 @jaxtyped(typechecker=typechecker)

@@ -4,8 +4,7 @@ from typing import Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ..config import config
-from ..engine import Tensor, DataType
+from seaDL import config, Tensor, DataType
 
 
 # @jaxtyped(typechecker=typechecker)

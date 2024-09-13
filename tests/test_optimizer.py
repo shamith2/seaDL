@@ -2,13 +2,14 @@ import pytest
 import torch
 import torch.nn.functional as F
 import numpy as np
+from collections import OrderedDict
 
 from torch.utils.data import DataLoader as torchDataLoader, TensorDataset
 from sklearn.datasets import make_moons
 from sklearn.model_selection import train_test_split as sk_train_test_split
 
 import seaDL
-from seaDL.nn import Module, Parameter
+from seaDL.nn import Parameter, Module, Sequential
 from seaDL.optim import SGD
 from seaDL.utils import DataLoader as DataLoader
 from seaDL.utils import train_test_split
@@ -55,20 +56,22 @@ class Net(Module):
     ):
         super().__init__()
 
-        self.l1 = seaDL.nn.Linear(in_dim, hidden_dim, bias=True)
-        self.r1 = seaDL.nn.ReLU()
-        self.l2 = seaDL.nn.Linear(hidden_dim, hidden_dim, bias=True)
-        self.r2 = seaDL.nn.ReLU()
-        self.l3 = seaDL.nn.Linear(hidden_dim, out_dim, bias=True)
-        # self.s1 = seaDL.nn.Softmax(dim=-1)
+        self.layers = Sequential(
+            OrderedDict([
+                ('l1', seaDL.nn.Linear(in_dim, hidden_dim, bias=True)),
+                ('r1', seaDL.nn.ReLU()),
+                ('l2', seaDL.nn.Linear(hidden_dim, hidden_dim, bias=True)),
+                ('r2', seaDL.nn.ReLU()),
+                ('l3', seaDL.nn.Linear(in_dim, out_dim, bias=True)),
+                # ('s1', torch.nn.Softmax(dim=-1))
+            ])
+        )
 
     def __call__(
             self,
             x: seaDL.Tensor
     ) -> seaDL.Tensor:
-        out = self.l3(self.r2(self.l2(self.r1(self.l1(x)))))
-
-        return out
+        return self.layers(x)
 
 
 def get_moon_data():
@@ -88,7 +91,7 @@ def train_with_optim(model_t, model, optimizer_t, optim, dl):
         out_t = model_t(xt_i)
         out = model(x_i)
 
-        loss_t = F.mse_loss(out_t, yt_i.unsqueeze(dim=-1))
+        loss_t = F.mse_loss(out_t, yt_i.unsqueeze(dim=-1).repeat_interleave(repeats=2, dim=-1))
         loss = seaDL.nn.functional.mse_loss(out, y_i.unsqueeze(dim=-1))
         # loss = F.cross_entropy(model(x_i), y_i)
 
@@ -200,12 +203,12 @@ def test_optim_sgd(pytest_configure):
         model_torch = Net_torch(2, 32, 2)
         model = Net(2, 32, 2)
 
-        model.l1.weight = Parameter(seaDL.Tensor(model_torch.layers[0].weight.detach().numpy()))
-        model.l1.bias = Parameter(seaDL.Tensor(model_torch.layers[0].bias.detach().numpy()))
-        model.l2.weight = Parameter(seaDL.Tensor(model_torch.layers[2].weight.detach().numpy()))
-        model.l2.bias = Parameter(seaDL.Tensor(model_torch.layers[2].bias.detach().numpy()))
-        model.l3.weight = Parameter(seaDL.Tensor(model_torch.layers[4].weight.detach().numpy()))
-        model.l3.bias = Parameter(seaDL.Tensor(model_torch.layers[4].bias.detach().numpy()))
+        model.layers[0].weight = Parameter(seaDL.Tensor(model_torch.layers[0].weight.detach().numpy()))
+        model.layers[0].bias = Parameter(seaDL.Tensor(model_torch.layers[0].bias.detach().numpy()))
+        model.layers[2].weight = Parameter(seaDL.Tensor(model_torch.layers[2].weight.detach().numpy()))
+        model.layers[2].bias = Parameter(seaDL.Tensor(model_torch.layers[2].bias.detach().numpy()))
+        model.layers[4].weight = Parameter(seaDL.Tensor(model_torch.layers[4].weight.detach().numpy()))
+        model.layers[4].bias = Parameter(seaDL.Tensor(model_torch.layers[4].bias.detach().numpy()))
 
         optim_torch = torch.optim.SGD(model_torch.parameters(), **opt_config)
         optim = SGD(model.parameters(), **opt_config)
@@ -220,16 +223,16 @@ def test_optim_sgd(pytest_configure):
         b1_correct = model_torch.layers[2].bias
         b2_correct = model_torch.layers[4].bias
 
-        w0_submitted = torch.from_numpy(np.array(model.l1.weight.data))
-        w1_submitted = torch.from_numpy(np.array(model.l2.weight.data))
-        w2_submitted = torch.from_numpy(np.array(model.l3.weight.data))
+        w0_submitted = torch.from_numpy(np.array(model.layers[0].weight.data))
+        w1_submitted = torch.from_numpy(np.array(model.layers[2].weight.data))
+        w2_submitted = torch.from_numpy(np.array(model.layers[4].weight.data))
 
-        b0_submitted = torch.from_numpy(np.array(model.l1.bias.data))
-        b1_submitted = torch.from_numpy(np.array(model.l2.bias.data))
-        b2_submitted = torch.from_numpy(np.array(model.l3.bias.data))
+        b0_submitted = torch.from_numpy(np.array(model.layers[0].bias.data))
+        b1_submitted = torch.from_numpy(np.array(model.layers[2].bias.data))
+        b2_submitted = torch.from_numpy(np.array(model.layers[4].bias.data))
 
         assert isinstance(w0_correct, torch.Tensor)
-        assert isinstance(model.l1.weight, Parameter)
+        assert isinstance(model.layers[0].weight, Parameter)
 
         torch.testing.assert_close(w0_correct, w0_submitted, rtol=0, atol=1e-5)
         torch.testing.assert_close(w1_correct, w1_submitted, rtol=0, atol=1e-5)

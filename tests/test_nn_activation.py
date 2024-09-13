@@ -14,7 +14,7 @@ def pytest_configure():
 
 
 def test_nn_relu(pytest_configure):
-    x = seaDL.random.normal(size=(10,)) - 0.5
+    x = nn.Parameter(seaDL.random.normal(size=(10,)) - 0.5)
     x_torch = torch.from_numpy(np.array(x.data))
 
     relu = nn.ReLU()
@@ -30,7 +30,7 @@ def test_nn_relu(pytest_configure):
 
 
 def test_nn_softmax(pytest_configure):
-    x = seaDL.random.normal(size=(2, 4)) - 0.5
+    x = nn.Parameter(seaDL.random.normal(size=(2, 4)) - 0.5)
     x_torch = torch.from_numpy(np.array(x.data))
 
     softmax = nn.Softmax(dim=0)
@@ -57,7 +57,7 @@ def test_nn_softmax(pytest_configure):
 
 
 def test_nn_log_softmax(pytest_configure):
-    x = seaDL.random.normal(size=(2, 4)) - 0.5
+    x = nn.Parameter(seaDL.random.normal(size=(2, 4)) - 0.5)
     x_torch = torch.from_numpy(np.array(x.data))
 
     softmax = nn.LogSoftmax(dim=0)

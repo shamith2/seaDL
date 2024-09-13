@@ -4,8 +4,8 @@ from typeguard import typechecked as typechecker
 
 from collections import OrderedDict
 
-from ..config import config, ArrayType
-from ..engine import Tensor, zeros_like
+from seaDL import config, ArrayType
+from seaDL import Tensor, zeros_like
 
 
 @jaxtyped(typechecker=typechecker)
@@ -294,4 +294,59 @@ class Module:
 
     def extra_repr(self):
         raise NotImplementedError
+
+
+@jaxtyped(typechecker=typechecker)
+class Sequential(Module):
+    def __init__(
+            self,
+            arg: OrderedDict[str, Module]
+    ):
+        super().__init__()
+
+        for name in arg:
+            self._modules[name] = arg[name]
+
+
+    def __getitem__(
+            self,
+            index: Union[int, str]
+    ) -> Module:
+        if isinstance(index, int):
+            index %= len(self._modules) # deal with negative indices
+            key = tuple(self._modules.keys())[index]
+
+        else:
+            key = index
+
+        return self._modules[key]
+
+
+    def __setitem__(
+            self,
+            index: Union[int, str],
+            module: Module
+    ):
+        if isinstance(index, int):
+            index %= len(self._modules) # deal with negative indices
+            key = tuple(self._modules.keys())[index]
+
+        else:
+            key = index
+
+        self._modules[key] = module
+
+
+    def __call__(
+            self,
+            x: Tensor
+    ) -> Tensor:
+        '''
+        Chain each module together,
+        with the output from one feeding into the next one
+        '''
+        for module in self._modules.values():
+            x = module(x)
+
+        return x
 

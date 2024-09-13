@@ -2,7 +2,7 @@ from typing import Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ...engine import Tensor, Device
+from seaDL import Tensor, Device
 
 
 @jaxtyped(typechecker=typechecker)

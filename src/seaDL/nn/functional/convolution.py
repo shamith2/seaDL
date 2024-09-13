@@ -2,9 +2,10 @@ from typing import Union, Optional
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ...engine import Tensor, Device, full
-from ...nn.base import Parameter
-from ...utils import _pair_value
+from seaDL import Tensor, Device, full
+from seaDL.utils import _pair_value
+
+from ..base import Parameter
 
 
 @jaxtyped(typechecker=typechecker)

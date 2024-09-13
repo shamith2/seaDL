@@ -1,7 +1,7 @@
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
-from ...engine import Tensor
+from seaDL import Tensor
 
 
 @jaxtyped(typechecker=typechecker)
