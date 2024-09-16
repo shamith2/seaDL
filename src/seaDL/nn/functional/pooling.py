@@ -9,7 +9,7 @@ from .convolution import pad2d
 
 
 @jaxtyped(typechecker=typechecker)
-def maxpool2d(
+def max_pool2d(
     x: Tensor,
     kernel_size: Union[int, tuple[int, int]],
     stride: Optional[Union[int, tuple[int, int]]] = None,
@@ -50,7 +50,7 @@ def maxpool2d(
 
 
 @jaxtyped(typechecker=typechecker)
-def averagepool2d(
+def avg_pool2d(
     x: Tensor,
     device: Optional[Device] = None
 ) -> Tensor:

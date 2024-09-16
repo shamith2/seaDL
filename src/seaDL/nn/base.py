@@ -26,14 +26,14 @@ class Parameter(Tensor):
 
 
     def sprint(self):
-        return "Parameter(data: {}, shape: {}, dtype: {}, grad: {}, requires_grad: {})".format(
-            self.data, self.data.shape, self.data_type.value_as_str, self.grad, self.requires_grad
+        return "Parameter(shape: {}, dtype: {}, requires_grad: {})".format(
+            self.data.shape, self.data_type.value_as_str, self.requires_grad
         )
 
 
     def __repr__(self):
-        return "Parameter(shape: {}, dtype: {}, requires_grad: {})".format(
-            self.data.shape, self.data_type.value_as_str, self.requires_grad
+        return "Parameter(data: {}, shape: {}, dtype: {}, grad: {}, requires_grad: {})".format(
+            self.data, self.data.shape, self.data_type.value_as_str, self.grad, self.requires_grad
         )
 
 

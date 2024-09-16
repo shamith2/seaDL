@@ -1,10 +1,9 @@
-from typing import Union, Optional, Self, Callable, Iterable
+from typing import Any, Union, Optional, Self, Callable, Iterable
 from jaxtyping import jaxtyped
 from typeguard import typechecked as typechecker
 
 import copy
 import collections
-import functools
 import math
 
 from .config import config, ArrayType
@@ -23,20 +22,29 @@ class Tensor:
     def __init__(
             self,
             data: Iterable = (),
-            dtype: Optional[DataType] = DataType('float32'),
+            dtype: Optional[DataType] = None,
             requires_grad: Optional[bool] = False
     ):
         data = () if data is None else data
 
         # value of node: can be result of an operation or constant value
         if not isinstance(data, ArrayType):
-            self.data = config.Array(data, dtype=dtype.value)
+            self.data = config.Array(data)
 
         else:
-            self.data = data.astype(dtype=dtype.value)
+            self.data = data
 
         # dtype of Tensor
-        self.data_type = dtype
+        if dtype is not None:
+            self.astype(dtype)
+
+        else:
+            if config.is_backend_numpy() and 'float64' in str(self.data.dtype):
+                self.data_type = DataType('float32')
+                self.astype(self.data_type)
+
+            else:
+                self.data_type = DataType(str(self.data.dtype))
 
         # operation in the computational graph
         # that connects this Tensor
@@ -93,18 +101,18 @@ class Tensor:
 
     def __getitem__(
             self,
-            indices
+            indices: Iterable
     ):
         """
         Support Tensor indexing
 
         Retrieve slices of elements from Tensor
         """
-        def _grad_fn(gradient: ArrayType, *inputs: Optional[tuple]):
-            grad = zeros_like(gradient, requires_grad=False).data
-            grad[indices] = gradient
+        def _grad_fn(gradient: ArrayType, *inputs: tuple[ArrayType]):
+            input_gradient = config.backend_op('zeros_like', inputs[0])
+            input_gradient[indices] = gradient
 
-            return (grad,)
+            return (input_gradient,)
 
         _operation = lambda x: x[indices]
 
@@ -137,8 +145,8 @@ class Tensor:
 
     def __setitem__(
             self,
-            indices,
-            value
+            indices: Iterable,
+            value: Any
     ):
         """
         Support Tensor indexing
@@ -148,7 +156,7 @@ class Tensor:
         This operation fires the computational graph
         """
         if self.numel() == 0:
-            value = self.operation.fire()
+            self.data = self.operation.fire()
 
         self.data[indices] = value.data if isinstance(value, Tensor) else value
 
@@ -160,10 +168,7 @@ class Tensor:
             # if Tensor has not been computed,
             # compute the Tensor
             if self.operation is not None:
-                fired_value = self.operation.fire()
-
-                # updated the Tensor after computation
-                self.data = fired_value
+                self.data = self.operation.fire()
 
         return self.data.shape
 
@@ -176,6 +181,18 @@ class Tensor:
     @property
     def itemsize(self):
         return self.data.itemsize
+
+
+    def __len__(self):
+        return len(self.data)
+
+
+    def tolist(self):
+        return self.data.tolist()
+
+
+    def totuple(self):
+        return tuple(self.data.tolist())
 
 
     @property
@@ -211,6 +228,8 @@ class Tensor:
         self.data = self.data.astype(dtype.value)
         self.data_type = dtype
 
+        return self
+
 
     def detach(self):
         return Tensor(
@@ -242,41 +261,37 @@ class Tensor:
         d (x + other) / d (x) = 1, d (x + other) / d (other) = 1
         gradient -> [x + other] -> (gradient * 1, gradient * 1)
         """
-        def _grad_fn(gradient, *inputs, return_all):
-            """
-            Taking broadcasting into account:
-                scenario 1: expanding shape of either Tensor with dimensions
-                            in the beginning to match shapes
-                scenario 2: expanding dims is not required since shape of Tensor
-                            already has 1s and is equal to the shape of the other Tensor 
-            """
-            # expanded dims
-            expanded_dims = tuple((gradient.ndim - tensor.ndim) for tensor in inputs)
-            input_gradients = [gradient, gradient]
-
-            for idx, (grad_i, expanded_dims_i) in enumerate(zip(input_gradients, expanded_dims)):
-                # scenario 1: for each dim in the expanded shape, sum out
-                # that dimension since broadcasting was applied to this dim
-                for _ in range(expanded_dims_i):
-                    grad_i = config.backend_op('sum', grad_i, axis=0, keepdims=False)
-
-                # scenario 2: if the shape of the Tensor already has 1s
-                # (without expanding dims), add the weights from that dimension
-                # since broadcasting was applied to this dim. The dimensions
-                # are kept intact since the dimensions were not expanded
-                for i, dim in enumerate(inputs[idx].shape):
-                    if dim == 1:
-                        grad_i = config.backend_op('sum', grad_i, axis=i, keepdims=True)
-
-                input_gradients[idx] = grad_i
-
-            return tuple(input_gradients) if return_all else (input_gradients[0],)
-
-        _grad_fn_one = functools.partial(_grad_fn, return_all=False)
-        _grad_fn_all = functools.partial(_grad_fn, return_all=True)
-
-
         if isinstance(other, Tensor):
+            def _grad_fn_all(gradient, *inputs):
+                """
+                Taking broadcasting into account:
+                    scenario 1: expanding shape of either Tensor with dimensions
+                                in the beginning to match shapes
+                    scenario 2: expanding dims is not required since shape of Tensor
+                                already has 1s and is equal to the shape of the other Tensor 
+                """
+                # expanded dims
+                expanded_dims = tuple((gradient.ndim - tensor.ndim) for tensor in inputs)
+                input_gradients = [gradient, gradient]
+
+                for idx, (grad_i, expanded_dims_i) in enumerate(zip(input_gradients, expanded_dims)):
+                    # scenario 1: for each dim in the expanded shape, sum out
+                    # that dimension since broadcasting was applied to this dim
+                    for _ in range(expanded_dims_i):
+                        grad_i = config.backend_op('sum', grad_i, axis=0, keepdims=False)
+
+                    # scenario 2: if the shape of the Tensor already has 1s
+                    # (without expanding dims), add the weights from that dimension
+                    # since broadcasting was applied to this dim. The dimensions
+                    # are kept intact since the dimensions were not expanded
+                    for i, dim in enumerate(inputs[idx].shape):
+                        if dim == 1:
+                            grad_i = config.backend_op('sum', grad_i, axis=i, keepdims=True)
+
+                    input_gradients[idx] = grad_i
+
+                return tuple(input_gradients)
+
             _operation = lambda x, y: config.backend_op('add', x, y)
 
             if GradientConfig.enable_grad and (self.requires_grad or other.requires_grad):
@@ -303,6 +318,21 @@ class Tensor:
                 )
 
         else:
+            def _grad_fn_one(gradient, *inputs):
+                data = inputs[0]
+                expanded_dims = gradient.ndim - data.ndim
+                input_gradient = gradient
+
+                # taking broadcasting into account
+                for _ in range(expanded_dims):
+                    input_gradient = config.backend_op('sum', input_gradient, axis=0, keepdims=False)
+
+                for d, dim in enumerate(inputs[0].shape):
+                    if dim == 1:
+                        input_gradient = config.backend_op('sum', input_gradient, axis=d, keepdims=True)
+
+                return (input_gradient,)
+
             _operation = lambda x: config.backend_op('add', x, other)
 
             if GradientConfig.enable_grad and self.requires_grad:
@@ -365,6 +395,25 @@ class Tensor:
         gradient -> [x * other] -> (gradient * other, gradient * x)
         """
         if isinstance(other, Tensor):
+            def _grad_fn_all(gradient, *inputs):
+                # expanded dims
+                expanded_dims = tuple((gradient.ndim - tensor.ndim) for tensor in inputs)
+                input_gradients = [config.backend_op('multiply', gradient, inputs[1]),
+                                   config.backend_op('multiply', gradient, inputs[0])]
+
+                # taking broadcasting into account
+                for idx, (grad_i, expanded_dims_i) in enumerate(zip(input_gradients, expanded_dims)):
+                    for _ in range(expanded_dims_i):
+                        grad_i = config.backend_op('sum', grad_i, axis=0, keepdims=False)
+
+                    for d, dim in enumerate(inputs[idx].shape):
+                        if dim == 1:
+                            grad_i = config.backend_op('sum', grad_i, axis=d, keepdims=True)
+
+                    input_gradients[idx] = grad_i
+
+                return tuple(input_gradients)
+
             _operation = lambda x, y: config.backend_op('multiply', x, y)
 
             if GradientConfig.enable_grad and (self.requires_grad or other.requires_grad):
@@ -372,8 +421,7 @@ class Tensor:
                     name='multiply',
                     operation=_operation,
                     inputs=(self, other),
-                    grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', gradient, inputs[1]),
-                                                       config.backend_op('multiply', gradient, inputs[0]))
+                    grad_fn=_grad_fn_all
                 )
 
                 result = Tensor(
@@ -392,6 +440,21 @@ class Tensor:
                 )
 
         else:
+            def _grad_fn_one(gradient, *inputs):
+                data = inputs[0]
+                expanded_dims = gradient.ndim - data.ndim
+                input_gradient = config.backend_op('multiply', gradient, other)
+
+                # taking broadcasting into account
+                for _ in range(expanded_dims):
+                    input_gradient = config.backend_op('sum', input_gradient, axis=0, keepdims=False)
+
+                for d, dim in enumerate(inputs[0].shape):
+                    if dim == 1:
+                        input_gradient = config.backend_op('sum', input_gradient, axis=d, keepdims=True)
+
+                return (input_gradient,)
+
             _operation = lambda x : config.backend_op('multiply', x, other)
 
             if GradientConfig.enable_grad and self.requires_grad:
@@ -399,7 +462,7 @@ class Tensor:
                     name='multiply',
                     operation=_operation,
                     inputs=(self,),
-                    grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', gradient, inputs[1]),)
+                    grad_fn=_grad_fn_one
                 )
 
                 result = Tensor(
@@ -436,6 +499,24 @@ class Tensor:
         gradient -> [x * other] -> (gradient * other, gradient * x)
         """
         if isinstance(other, Tensor):
+            def _grad_fn_all(gradient, *inputs):
+                expanded_dims = tuple((gradient.ndim - tensor.ndim) for tensor in inputs)
+                input_gradients = [config.backend_op('divide', gradient, inputs[1]),
+                                   config.backend_op('multiply', config.backend_op('negative', gradient), config.backend_op('divide', inputs[0], config.backend_op('power', inputs[1], 2)))]
+
+                # taking broadcasting into account
+                for idx, (grad_i, expanded_dims_i) in enumerate(zip(input_gradients, expanded_dims)):
+                    for _ in range(expanded_dims_i):
+                        grad_i = config.backend_op('sum', grad_i, axis=0, keepdims=False)
+
+                    for d, dim in enumerate(inputs[idx].shape):
+                        if dim == 1:
+                            grad_i = config.backend_op('sum', grad_i, axis=d, keepdims=True)
+
+                    input_gradients[idx] = grad_i
+
+                return tuple(input_gradients)
+
             _operation = lambda x, y: config.backend_op('divide', x, y)
 
             if GradientConfig.enable_grad and (self.requires_grad or other.requires_grad):
@@ -443,8 +524,7 @@ class Tensor:
                     name='divide',
                     operation=_operation,
                     inputs=(self, other),
-                    grad_fn=lambda gradient, *inputs: (config.backend_op('divide', gradient, inputs[1]),
-                                                       config.backend_op('multiply', config.backend_op('negative', gradient), config.backend_op('divide', inputs[0], config.backend_op('power', inputs[1], 2))))
+                    grad_fn=_grad_fn_all
                 )
 
                 result = Tensor(
@@ -463,6 +543,21 @@ class Tensor:
                 )
 
         else:
+            def _grad_fn_one(gradient, *inputs):
+                data = inputs[0]
+                expanded_dims = gradient.ndim - data.ndim
+                input_gradient = config.backend_op('divide', gradient, other)
+
+                # taking broadcasting into account
+                for _ in range(expanded_dims):
+                    input_gradient = config.backend_op('sum', input_gradient, axis=0, keepdims=False)
+
+                for d, dim in enumerate(inputs[0].shape):
+                    if dim == 1:
+                        input_gradient = config.backend_op('sum', input_gradient, axis=d, keepdims=True)
+
+                return (input_gradient,)
+
             _operation = lambda x : config.backend_op('divide', x, other)
 
             if GradientConfig.enable_grad and self.requires_grad:
@@ -470,7 +565,7 @@ class Tensor:
                     name='divide',
                     operation=_operation,
                     inputs=(self,),
-                    grad_fn=lambda gradient, *inputs: (config.backend_op('divide', gradient, inputs[1]),)
+                    grad_fn=_grad_fn_one
                 )
 
                 result = Tensor(
@@ -584,6 +679,25 @@ class Tensor:
                                     gradient * (x ^ other) * ln(x))
         """
         if isinstance(other, Tensor):
+            def _grad_fn_all(gradient, *inputs):
+                # expanded dims
+                expanded_dims = tuple((gradient.ndim - tensor.ndim) for tensor in inputs)
+                input_gradients = [config.backend_op('multiply', gradient, config.backend_op('multiply', inputs[1], config.backend_op('power', inputs[0], config.backend_op('subtract', inputs[1], 1)))),
+                                   config.backend_op('multiply', gradient, config.backend_op('multiply', config.backend_op('power', inputs[0], inputs[1]), config.backend_op('log', inputs[0])))]
+
+                # taking broadcasting into account
+                for idx, (grad_i, expanded_dims_i) in enumerate(zip(input_gradients, expanded_dims)):
+                    for _ in range(expanded_dims_i):
+                        grad_i = config.backend_op('sum', grad_i, axis=0, keepdims=False)
+
+                    for d, dim in enumerate(inputs[idx].shape):
+                        if dim == 1:
+                            grad_i = config.backend_op('sum', grad_i, axis=d, keepdims=True)
+
+                    input_gradients[idx] = grad_i
+
+                return tuple(input_gradients)
+
             _operation = lambda x, y: config.backend_op('power', x, y)
 
             if GradientConfig.enable_grad and (self.requires_grad or other.requires_grad):
@@ -591,8 +705,7 @@ class Tensor:
                     name='power',
                     operation=_operation,
                     inputs=(self, other),
-                    grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', gradient, config.backend_op('multiply', inputs[1], config.backend_op('power', inputs[0], config.backend_op('subtract', inputs[1], 1)))),
-                                                       config.backend_op('multiply', gradient, config.backend_op('multiply', config.backend_op('power', inputs[0], inputs[1]), config.backend_op('log', inputs[0]))))
+                    grad_fn=_grad_fn_all
                 )
 
                 result = Tensor(
@@ -611,6 +724,21 @@ class Tensor:
                 )
 
         else:
+            def _grad_fn_one(gradient, *inputs):
+                data = inputs[0]
+                expanded_dims = gradient.ndim - data.ndim
+                input_gradient = config.backend_op('multiply', gradient, config.backend_op('multiply', other, config.backend_op('power', inputs[0], config.backend_op('subtract', other, 1))))
+
+                # taking broadcasting into account
+                for _ in range(expanded_dims):
+                    input_gradient = config.backend_op('sum', input_gradient, axis=0, keepdims=False)
+
+                for d, dim in enumerate(inputs[0].shape):
+                    if dim == 1:
+                        input_gradient = config.backend_op('sum', input_gradient, axis=d, keepdims=True)
+
+                return (input_gradient,)
+
             _operation = lambda x: config.backend_op('power', x, other)
 
             if GradientConfig.enable_grad and self.requires_grad:
@@ -618,7 +746,7 @@ class Tensor:
                     name='power',
                     operation=_operation,
                     inputs=(self,),
-                    grad_fn=lambda gradient, *inputs: (config.backend_op('multiply', gradient, config.backend_op('multiply', other, config.backend_op('power', inputs[0], config.backend_op('subtract', other, 1)))),)
+                    grad_fn=_grad_fn_one
                 )
 
                 result = Tensor(
@@ -812,7 +940,7 @@ class Tensor:
             keepdim: Optional[bool] = False
     ):
         def _grad_fn(gradient, *inputs):
-            if dim is not None:
+            if dim is not None and not keepdim:
                 gradient = config.backend_op('expand_dims', gradient, axis=dim)
 
             input_gradient = config.backend_op('multiply', gradient, config.backend_op('ones_like', inputs[0]))
@@ -820,7 +948,6 @@ class Tensor:
             return (input_gradient,)
 
         _operation = lambda x: config.backend_op('sum', x, axis=dim, keepdims=keepdim)
-
 
         if GradientConfig.enable_grad and self.requires_grad:
             node = Operation(
@@ -854,8 +981,10 @@ class Tensor:
     ):
         def _grad_fn(gradient, *inputs):
             if dim is not None:
-                gradient = config.backend_op('expand_dims', gradient, axis=dim)
-                shape_prod = prod(tuple(self.shape[d] for d in dim))
+                if not keepdim:
+                    gradient = config.backend_op('expand_dims', gradient, axis=dim)
+
+                shape_prod = prod(tuple(self.shape[d] for d in dim)) if isinstance(dim, (tuple, list)) else self.shape[dim]
 
             else:
                 shape_prod = prod(self.shape)
@@ -901,7 +1030,7 @@ class Tensor:
             data = inputs[0]
             input_gradient = config.backend_op('zeros_like', data)
 
-            if dim is not None:
+            if dim is not None and not keepdim:
                 gradient = config.backend_op('expand_dims', gradient, axis=dim)
 
             max_values = config.backend_op('max', data, axis=dim, keepdims=True)
@@ -1004,11 +1133,11 @@ class Tensor:
         out[..., 1:3] = x is equivalent to
         out = out.set_slice((Ellipsis, slice(1, 3)), x)
         """
-        def _grad_fn(gradient, *tensors):
-            grad = zeros_like(gradient).data
-            grad[indices] = gradient
+        def _grad_fn(gradient, *inputs):
+            input_gradient = config.backend_op('zeros_like', inputs[0])
+            input_gradient[indices] = gradient
 
-            return (grad,)
+            return (input_gradient,)
 
         def _operation(x, y):
             x[indices] = y
@@ -1265,6 +1394,67 @@ class Tensor:
                 )
 
                 result += (r,)
+
+        return result
+
+
+    def repeat_interleave(
+            self,
+            repeats: int,
+            dim: Optional[int] = None
+    ):
+        def _grad_fn(gradient, *inputs):
+            # if no dim is None, the tensor is flattened, so sum
+            # over the repeated elements. reshape(gradient, (-1, repeats))
+            # puts the repeated elements of each element in axis=1
+            if dim is None:
+                input_gradient = config.backend_op('sum', config.backend_op('reshape', gradient, (-1, repeats)), axis=1)
+                input_gradient = config.backend_op('reshape', input_gradient, inputs[0].shape)
+
+            else:
+                grad_ndim = gradient.ndim
+                p_dim = dim if dim >= 0 else grad_ndim + dim # account for negative dim
+
+                input_gradient = config.backend_op('zeros_like', inputs[0])
+
+                # split the gradient into chunks of repeated elements along axis=dim
+                gradient_split = config.backend_op('split', gradient, config.backend_op('cumsum', config.Array((repeats,) * inputs[0].shape[p_dim]))[:-1], axis=p_dim)
+
+                # and add the repeated elements in gradient and copy them
+                # over to the input gradient at the appropriate indices
+                for i, grad_split_i in enumerate(gradient_split):
+                    # this is equivalent to Array[..., dim, ...]
+                    indices = [slice(None)] * grad_ndim
+                    indices[p_dim] = i
+
+                    input_gradient[tuple(indices)] = config.backend_op('sum', grad_split_i, axis=p_dim, keepdims=False)
+
+            return (input_gradient,)
+
+        _operation = lambda x: config.backend_op('repeat', x, repeats, axis=dim)
+
+
+        if GradientConfig.enable_grad and self.requires_grad:
+            node = Operation(
+                name='repeat_interleave',
+                operation=_operation,
+                inputs=(self,),
+                grad_fn=_grad_fn
+            )
+
+            result = Tensor(
+                dtype=self.data_type,
+                requires_grad=True
+            )
+
+            result.operation = node
+
+        else:
+            result = Tensor(
+                data=_operation(self.data),
+                dtype=self.data_type,
+                requires_grad=False
+            )
 
         return result
 
@@ -1583,11 +1773,17 @@ class Operation:
                 node_input.backward(Tensor(input_grad, requires_grad=False))
 
 
-    def __repr__(self):
+    def sprint(self):
         return "Operation(op: {}, value_shape: {}, fired: {})".format(
             self.name,
             None if self.value is None else tuple(v.shape for v in self.value) if isinstance(self.value, (list, tuple)) else self.value.shape,
             self.fired
+        )
+
+
+    def __repr__(self):
+        return "Operation(op: {}, value: {}, fired: {})".format(
+            self.name, self.value, self.fired
         )
 
 
@@ -1596,40 +1792,40 @@ class Operation:
 @jaxtyped(typechecker=typechecker)
 def zeros_like(
         tensor: Union[Tensor, ArrayType],
-        requires_grad: Optional[bool] = False
+        requires_grad: Optional[bool] = None
 ):
     if isinstance(tensor, ArrayType):
         return Tensor(
             data=config.backend_op('zeros_like', tensor),
             dtype=DataType(str(tensor.dtype)),
-            requires_grad=requires_grad
+            requires_grad=requires_grad if requires_grad is not None else False
         )
 
     else:
         return Tensor(
             data=config.backend_op('zeros_like', tensor.data),
             dtype=tensor.data_type,
-            requires_grad=requires_grad
+            requires_grad=requires_grad if requires_grad is not None else tensor.requires_grad
         )
 
 
 @jaxtyped(typechecker=typechecker)
 def ones_like(
         tensor: Union[Tensor, ArrayType],
-        requires_grad: Optional[bool] = False
+        requires_grad: Optional[bool] = None
 ):
     if isinstance(tensor, ArrayType):
         return Tensor(
             data=config.backend_op('ones_like', tensor),
             dtype=DataType(str(tensor.dtype)),
-            requires_grad=requires_grad
+            requires_grad=requires_grad if requires_grad is not None else False
         )
 
     else:
         return Tensor(
             data=config.backend_op('ones_like', tensor.data),
             dtype=tensor.data_type,
-            requires_grad=requires_grad
+            requires_grad=requires_grad if requires_grad is not None else tensor.requires_grad
         )
 
 

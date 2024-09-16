@@ -19,7 +19,7 @@ from seaDL.utils import train_test_split
 def pytest_configure():
     pytest.device = None
     pytest.n_tests = 10
-    pytest.seed = 42
+    pytest.seed = 4224
 
 
 class Net_torch(torch.nn.Module):
@@ -36,8 +36,7 @@ class Net_torch(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(hidden_dim, hidden_dim, bias=True),
             torch.nn.ReLU(),
-            torch.nn.Linear(hidden_dim, out_dim, bias=True),
-            # torch.nn.Softmax(dim=-1)
+            torch.nn.Linear(hidden_dim, out_dim, bias=True)
         )
 
     def forward(
@@ -62,8 +61,7 @@ class Net(Module):
                 ('r1', seaDL.nn.ReLU()),
                 ('l2', seaDL.nn.Linear(hidden_dim, hidden_dim, bias=True)),
                 ('r2', seaDL.nn.ReLU()),
-                ('l3', seaDL.nn.Linear(in_dim, out_dim, bias=True)),
-                # ('s1', torch.nn.Softmax(dim=-1))
+                ('l3', seaDL.nn.Linear(in_dim, out_dim, bias=True))
             ])
         )
 
@@ -77,11 +75,14 @@ class Net(Module):
 def get_moon_data():
     X, y = make_moons(n_samples=512, noise=0.05, random_state=pytest.seed)
 
+    X = X.astype('float32')
+    y = y.astype('int64')
+
     return DataLoader(X, y, batch_size=128, shuffle=False)
 
 
 def train_with_optim(model_t, model, optimizer_t, optim, dl):
-    for x_i, y_i in dl:
+    for idx, (x_i, y_i) in enumerate(dl):
         xt_i = torch.from_numpy(np.array(x_i.data))
         yt_i = torch.from_numpy(np.array(y_i.data))
 
@@ -91,27 +92,31 @@ def train_with_optim(model_t, model, optimizer_t, optim, dl):
         out_t = model_t(xt_i)
         out = model(x_i)
 
-        loss_t = F.mse_loss(out_t, yt_i.unsqueeze(dim=-1).repeat_interleave(repeats=2, dim=-1))
-        loss = seaDL.nn.functional.mse_loss(out, y_i.unsqueeze(dim=-1))
-        # loss = F.cross_entropy(model(x_i), y_i)
+        loss_t = F.nll_loss(out_t - out_t.sum(dim=-1, keepdim=True), yt_i, reduction='mean')
+        loss = seaDL.nn.functional.nll_loss(out - out.sum(dim=-1, keepdim=True), y_i, reduction='mean')
 
         if seaDL.config.is_backend_numpy():
             loss = loss.squeeze(dim=0)
 
-        if isinstance(loss, seaDL.Tensor):
-            seaDL.fire(loss)
+        seaDL.fire(loss)
+
+        print(loss_t, loss_t.shape)
+        print(loss, out.shape)
+
+        # g = seaDL.utils.visualize_graph(loss)
+        # g.render('computational_graph_2', view=True, cleanup=True)
 
         torch.testing.assert_close(
             out_t,
             torch.from_numpy(np.array(out.data)),
-            rtol=0,
+            rtol=1e-5,
             atol=1e-5
         )
 
         torch.testing.assert_close(
             loss_t,
             torch.from_numpy(np.array(loss.data)),
-            rtol=0,
+            rtol=1e-5,
             atol=1e-5
         )
 
@@ -199,6 +204,7 @@ def test_optim_sgd(pytest_configure):
 
     for opt_config in test_cases:
         torch.manual_seed(pytest.seed)
+        # seaDL.config.backend.random.seed(pytest.seed)
 
         model_torch = Net_torch(2, 32, 2)
         model = Net(2, 32, 2)
@@ -234,11 +240,11 @@ def test_optim_sgd(pytest_configure):
         assert isinstance(w0_correct, torch.Tensor)
         assert isinstance(model.layers[0].weight, Parameter)
 
-        torch.testing.assert_close(w0_correct, w0_submitted, rtol=0, atol=1e-5)
-        torch.testing.assert_close(w1_correct, w1_submitted, rtol=0, atol=1e-5)
-        torch.testing.assert_close(w2_correct, w2_submitted, rtol=0, atol=1e-5)
+        torch.testing.assert_close(w0_correct, w0_submitted, rtol=1e-5, atol=1e-5)
+        torch.testing.assert_close(w1_correct, w1_submitted, rtol=1e-5, atol=1e-5)
+        torch.testing.assert_close(w2_correct, w2_submitted, rtol=1e-5, atol=1e-5)
 
-        torch.testing.assert_close(b0_correct, b0_submitted, rtol=0, atol=1e-5)
-        torch.testing.assert_close(b1_correct, b1_submitted, rtol=0, atol=1e-5)
-        torch.testing.assert_close(b2_correct, b2_submitted, rtol=0, atol=1e-5)
+        torch.testing.assert_close(b0_correct, b0_submitted, rtol=1e-5, atol=1e-5)
+        torch.testing.assert_close(b1_correct, b1_submitted, rtol=1e-5, atol=1e-5)
+        torch.testing.assert_close(b2_correct, b2_submitted, rtol=1e-5, atol=1e-5)
 

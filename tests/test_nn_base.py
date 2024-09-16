@@ -111,8 +111,6 @@ def test_module(pytest_configure):
                                np.maximum(np.array(((x.data @ net.linear.weight.data.transpose()) + net.linear.bias.data)), 0),
                                rtol=1e-5)
 
-    print(net.linear.bias.shape, net.linear.bias.grad.shape)
-
     assert gradient_check(output, net.linear.weight, h=1e-6, error_tolerance=0.03)
     assert gradient_check(output, net.linear.bias, h=1e-6, error_tolerance=0.03)
 

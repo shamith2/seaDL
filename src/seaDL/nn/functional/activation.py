@@ -42,5 +42,11 @@ def log_softmax(
     """
     Like torch.nn.functional.log_softmax
     """
-    return softmax(x, dim=dim).log()
+    x_prime = x - x.max(dim=dim, keepdim=True)
+
+    normalization = x_prime.exp().sum(dim=dim, keepdim=True)
+
+    log_probs = x_prime - normalization.log()
+
+    return log_probs
 

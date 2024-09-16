@@ -29,7 +29,7 @@ def test_maxpool2d(pytest_configure):
         x = seaDL.random.normal(size=(b.item(), ci.item(), h.item(), w.item()))
         x_torch = torch.from_numpy(np.array(x.data))
 
-        my_output = nn.functional.maxpool2d(
+        my_output = nn.functional.max_pool2d(
             x,
             kernel_size,
             stride=stride,

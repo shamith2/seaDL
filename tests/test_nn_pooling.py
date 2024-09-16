@@ -61,7 +61,7 @@ def test_nn_maxpool2d(pytest_configure):
 
 
 def test_averagepool(pytest_configure):
-    x = seaDL.Tensor(mx.arange(24)).reshape((1, 2, 3, 4))
+    x = seaDL.Tensor(mx.arange(24, dtype=mx.float32)).reshape((1, 2, 3, 4))
 
     actual = AveragePool2d()(x)
 

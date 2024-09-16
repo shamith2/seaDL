@@ -40,8 +40,9 @@ class SGD:
         # set number of steps to zero initially
         self.t = 0
 
-        # model parameter gradients
-        self.gs = [zeros_like(param) for param in self.params]
+        # keeping track of model parameter gradients
+        # for momentum calculation
+        self.gs = [zeros_like(param, requires_grad=False) for param in self.params]
 
 
     def zero_grad(self):

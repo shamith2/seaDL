@@ -39,20 +39,20 @@ class DataType:
             self,
             dtype: str = 'float32'
     ):
-        self.value_as_str = dtype
+        self.value_as_str = dtype.lower()
 
         # to accomodate for dtype strings
         # like "mlx.core.float32"
-        if 'float32' in dtype.lower():
+        if 'float32' in self.value_as_str:
             self.value = config.backend.float32
 
-        elif 'float16' in dtype.lower():
+        elif 'float16' in self.value_as_str:
             self.value = config.backend.float16
 
-        elif 'int32' in dtype.lower():
+        elif 'int32' in self.value_as_str:
             self.value = config.backend.int32
 
-        elif 'int64' in dtype.lower():
+        elif 'int64' in self.value_as_str:
             self.value = config.backend.int64
 
         else:
